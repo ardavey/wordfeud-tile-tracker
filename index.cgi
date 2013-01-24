@@ -1,6 +1,8 @@
 #!/usr/bin/perl -w
 use strict;
 
+use lib qw( /home/ardavey/perlmods );
+
 use Data::Dumper;
 
 use CGI::Pretty;
@@ -15,6 +17,9 @@ print $q->start_html( -title => 'Wordfeud stats' );
 my $action = $q->param( "action" ) || 'login_form';
 
 if ( $action eq 'login_form' ) {
+  print $q->h2( 'Wordfeud Tile Tracker' );
+  print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow you to view the remaining tiles on any of your current Wordfeud games.' );
+  print $q->p( 'The site is under active development, and will change and evolve with no notice.  I plan to get all of the functionality in place before I "pretty it up" - function over form!' );
   print $q->p( 'Please enter your Wordfeud credentials.  These are only used to talk to the game server, and are NOT stored anywhere.' );
   print $q->start_form(
     -name => 'login_form',
@@ -44,6 +49,7 @@ if ( $action eq 'login_form' ) {
   );
   print $q->end_form;
 
+  print $q->p( 'I will try my best not to break the site so that you can continue to use it.  Please report any issues or request features <a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">here</a>.<br><br> <i>-- ardavey</i>' );
 }
 elsif ( $action eq 'get_game_list' ) {
   if ( $wf->set_session_id( $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) ) ) ) {
@@ -92,7 +98,7 @@ elsif ( $action eq 'get_game_list' ) {
   print "</ul>\n</li>";
   print $q->end_ul();
   
-  print $q->h3( 'Recently Completed Games:s' );
+  print $q->h3( 'Recently Completed Games:' );
   
   print $q->start_ul();
   foreach my $game ( @complete ) {
