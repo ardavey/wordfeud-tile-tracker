@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 use strict;
-
 use lib qw( /home/ardavey/perlmods );
 
 use Data::Dumper;
@@ -12,8 +11,11 @@ my $q = new CGI;
 my $wf = new Wordfeud;
 
 print $q->header();
-print $q->start_html( -title => 'Wordfeud stats' );
-  
+print $q->start_html(
+                      -title => 'Wordfeud stats',
+                      -style => { 'src' => 'style.css' },
+                    );
+
 my $action = $q->param( "action" ) || 'login_form';
 
 if ( $action eq 'login_form' ) {
@@ -175,11 +177,12 @@ elsif ( $action eq 'show_game' ) {
   print $q->p( 'Your rack:<br>[<code> ' .join( ' ', @rack )." </code>]\n" );
   print $q->p( 'Remaining tiles:<br>[<code> '. join( ' ', split( //, $remaining ) ) ." </code>]\n" );
   print $q->p( 'Board:' );
-  print $q->pre( printable_board( \@board ) );
-
+  print_board( \@board );
 }
 
 print $q->end_html();
+
+#-------------------------------------------------------------------------------
 
 sub printable_game {
   my ( $game ) = @_;
@@ -193,18 +196,287 @@ sub printable_game {
   return $game_row;
 }
 
-sub printable_board {
+sub print_board {
   my ( $board_ref ) = @_;
-  my @board = @$board_ref;
   my $printable_board = '';
-  foreach my $r ( @board ) {
+  foreach my $r ( @$board_ref ) {
     $printable_board .= '+' . '---+' x 15 . "\n";
     my @row = map { $_ ||= ' ' } @$r;
     $printable_board .= '| ' . join( ' | ', @row ) . " |\n";
   }
   $printable_board .= '+' . '---+' x 15 . "\n";
-  return $printable_board;
-}  
+  print $q->pre( $printable_board );
+  
+  #pretty_board();
+}
+
+
+sub pretty_board {
+  my ( $board ) = @_;
+
+print <<EOQ;
+<table class="board">
+  <tbody>
+    <tr>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="tw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tw">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="tw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tw">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="tl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="dl">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tw">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="">&nbsp;</td>
+      <td class="tl">&nbsp;</td>
+    </tr>
+  </tbody>
+</table>
+EOQ
+
+}
 
 sub set_my_player {
   my ( $game ) = @_;

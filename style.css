@@ -1,0 +1,40 @@
+p,ul {
+  font-family: sans-serif;
+}
+
+table.board {
+  border: 1px solid black;
+  border-collapse: collapse;
+  padding: 0;
+}
+
+td {
+  background-color: #232630;
+  border: 1px solid black;  
+  padding: 0;
+  width: 20px;
+  height: 20px;
+}
+
+td.tile {
+  background-color: #fffbf6;
+  text-align: center;
+  vertical-align: middle;
+}
+
+td.tw {
+  background-color: #823c40;
+}
+
+td.dw {
+  background-color: #b67320;
+}
+
+td.tl {
+  background-color: #4964a8;
+}
+
+td.dl {
+  background-color: #729c68;
+}
+
