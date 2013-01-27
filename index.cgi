@@ -51,7 +51,7 @@ if ( $action eq 'login_form' ) {
   );
   print $q->end_form;
 
-  print $q->p( 'I will try my best not to break the site so that you can continue to use it.  Please report any issues or request features <a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">here</a>.<br><br> <i>-- ardavey</i>' );
+  print $q->p( 'I will try my best not to break the site so that you can continue to use it.  Please report any issues or request features <a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">here</a>.' );
 }
 elsif ( $action eq 'get_game_list' ) {
   if ( $wf->set_session_id( $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) ) ) ) {
@@ -179,6 +179,8 @@ elsif ( $action eq 'show_game' ) {
   print $q->p( 'Board:' );
   print_board( \@board );
 }
+
+hit_counter();
 
 print $q->end_html();
 
@@ -489,3 +491,26 @@ sub set_my_player {
   }
 }
 
+sub hit_counter {  
+  # very simple hit counter - I want to see if anyone else is using this!
+  my $hits;
+  
+  # 'hits' is a txt file where the first row represents the number of hits
+  if ( -e "./wf_hits" ) {
+    open HITREAD, "< wf_hits";
+    my @in = <HITREAD>;
+    close HITREAD;
+    chomp @in;
+    $hits = $in[0];
+  }
+  else {
+    $hits = 0;
+  }
+  
+  print $q->small( "ardavey 2013<br>" . ++$hits );
+  
+  # attempt to write the new hitcounter value to file
+  open HITWRITE, "> wf_hits";
+  print HITWRITE $hits;
+  close HITWRITE;
+}
