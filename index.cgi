@@ -5,62 +5,86 @@ use lib qw( /home/ardavey/perlmods );
 use Data::Dumper;
 
 use CGI::Pretty;
+use CGI::Cookie;
+
 use Wordfeud;
 
 my $q = new CGI;
 my $wf = new Wordfeud;
 
-print $q->header();
-print $q->start_html(
-                      -title => 'Wordfeud stats',
-                      -style => { 'src' => 'style.css' },
-                    );
+my $debug = 0;
 
 my $action = $q->param( "action" ) || 'login_form';
 
 if ( $action eq 'login_form' ) {
+  start_page();
+  
+  #my %cookies = CGI::Cookie->fetch();
+  #if ( exists $cookies{sessionID} ) {
+  #  redirect( 'game_list' );
+  #}
+
   print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow you to view the remaining tiles on any of your current Wordfeud games.' );
   print $q->p( 'The site is under active development, and will change and evolve with no notice.  I plan to get all of the functionality in place before I "pretty it up" - function over form!' );
   print $q->p( 'Please enter your Wordfeud credentials.  These are only used to talk to the game server, and are NOT stored anywhere.' );
+  
+  $q->delete_all();
   print $q->start_form(
     -name => 'login_form',
     -method => 'POST',
   );
-  print $q->p( 'Email address: '
-    . $q->textfield(
+  print $q->p(
+    'Email address: ',
+    $q->textfield(
       -name => 'email',
       -value => '',
       -size => 30,
     )
   );
-  print $q->p( 'Password: '
-	  . $q->password_field(
+  print $q->p(
+    'Password: ',
+    $q->password_field(
       -name => 'password',
       -size => 30,
     )
   );
   print $q->hidden(
     -name => 'action',
-    -default => 'get_game_list',
+    -default => 'do_login',
   );
   print $q->p( $q->submit(
-      -name => 'submit_form',
-      -value => 'Log in',
+    -name => 'submit_form',
+    -value => 'Log in',
     )
   );
   print $q->end_form;
 
-  print $q->p( 'I will try my best not to break the site so that you can continue to use it.  Please report any issues or request features <a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">here</a>.' );
+  print $q->p( 'I will try my best not to break the site so that you can continue to use it, but it is of course presented without any guarantees.',
+               'Please report any issues or request features',
+               $q->a( { href => 'http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/' }, 'here' ),
+             )
 }
-elsif ( $action eq 'get_game_list' ) {
-  if ( $wf->set_session_id( $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) ) ) ) {
-    print $q->p( 'Logged in successfully (session '.$wf->get_session_id().')' );
+elsif ( $action eq 'do_login' ) {
+  my %cookies = CGI::Cookie->fetch();
+  if ( !exists $cookies{sessionID} ) {
+    if ( $wf->set_session_id( $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) ) ) ) {
+      my $cookie = CGI::Cookie->new(
+        -name => 'sessionID',
+        -value => $wf->get_session_id(),
+        -expires => '+3d',
+      );
+      start_page( $cookie );
+      print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
+    }
+    else {
+      start_page();
+    }
   }
-  else {
-    print $q->p( 'Failed to log in - go back and try again.' );
-    exit 1;
-  }
+  redirect( 'game_list' );
+}
+elsif ( $action eq 'game_list' ) {
+  check_cookie();
   
   my $games = $wf->get_games();
   
@@ -111,9 +135,18 @@ elsif ( $action eq 'get_game_list' ) {
   print $q->hr();
 }
 elsif ( $action eq 'show_game' ) {
-  my $id = $q->param( 'id' );
-  $wf->set_session_id( $q->param( 'session' ) );
+  check_cookie();
   
+  print $q->small(
+    $q->a(
+      {
+        href => '?action=game_list',
+      },
+      '<-- back to game list'
+    )
+  );
+  
+  my $id = $q->param( 'id' );
   my $game = $wf->get_game( $id );
   set_my_player( $game );
   my $me = $game->{my_player};
@@ -153,44 +186,114 @@ elsif ( $action eq 'show_game' ) {
 
   my $avail = {};
   
-  foreach my $l ( split( //, $Wordfeud::distribution ) ) {
-    if ( $avail->{$l} ) {
-      $avail->{$l}++;
+  foreach my $letter ( split( //, $Wordfeud::distribution ) ) {
+    if ( $avail->{$letter} ) {
+      $avail->{$letter}++;
     }
     else {
-      $avail->{$l} = 1;
+      $avail->{$letter} = 1;
     }
   }
   
-  foreach my $l ( @seen_tiles ) {
-    $avail->{$l}--;
-    if ( $avail->{$l} == 0 ) {
-      delete $avail->{$l};
+  foreach my $letter ( @seen_tiles ) {
+    $avail->{$letter}--;
+    if ( $avail->{$letter} == 0 ) {
+      delete $avail->{$letter};
     }
   }
   
   my $remaining = '';
-  foreach my $l ( sort keys %$avail ) {
-    $remaining .= $l x $avail->{$l};
+  foreach my $letter ( sort keys %$avail ) {
+    $remaining .= $letter x $avail->{$letter};
   }
   
   print $q->p( 'Your rack:<br>[<code> ' .join( ' ', @rack )." </code>]\n" );
   print $q->p( 'Remaining tiles:<br>[<code> '. join( ' ', split( //, $remaining ) ) ." </code>]\n" );
   print $q->p( 'Board:' );
-  print_board( \@board );
+  pretty_board( \@board );
 }
+#elsif ( $action eq 'logout' ) {
+#  my $cookie = CGI::Cookie->new(
+#    -name => 'sessionID',
+#    -value => '',
+#    -expires => '-1d',
+#  );
+#  start_page( $cookie );
+#  redirect( 'login_form' );
+#}
+#
+#print $q->p(
+#  $q->a(
+#    { href => '?action=logout' },
+#    'Log out',
+#  )
+#);
 
+print $q->p( '<a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">Give feedback</a>' );
 hit_counter();
 
 print $q->end_html();
 
 #-------------------------------------------------------------------------------
 
+sub start_page {
+  my ( $cookie ) = @_;
+  
+  if ( $cookie ) {
+    print $q->header( -cookie => $cookie );
+  }
+  else {
+    print $q->header();
+  }
+  
+  print $q->start_html(
+    -title => 'Wordfeud Tile Information',
+    -style => { 'src' => 'style.css' },
+  );
+}
+
+sub check_cookie {
+  my %cookies = CGI::Cookie->fetch();
+  unless ( exists $cookies{sessionID} ) {
+    redirect( 'login_form' );
+  }
+  $wf->set_session_id( $cookies{sessionID}->{value}->[0] );
+  start_page( $cookies{sessionID} );
+}
+
+sub redirect {
+  my ( $action ) = @_;
+  
+  $q->delete_all();
+  print $q->start_form(
+    -name => 'redirect_form',
+    -method => 'POST',
+  );
+
+  print $q->hidden(
+    -name => 'session',
+    -default => $wf->get_session_id(),
+  );    
+
+  print $q->hidden(
+    -name => 'action',
+    -default => $action,
+  );
+  print $q->p(
+    $q->submit(
+      -name => 'submit_form',
+      -value => 'Continue'
+    )
+  );
+  print $q->end_form;
+  print '<SCRIPT LANGUAGE="JavaScript">document.forms[0].submit();</SCRIPT>';
+}
+
 sub printable_game {
   my ( $game ) = @_;
   my $id = $game->{id};
   my $me = $game->{my_player};
-  my $game_row = '<a href="?session='.$wf->get_session_id().'&action=show_game&id='.$id.'">Game '.$id.'</a>: ';
+  my $game_row = '<a href="?action=show_game&id='.$id.'">Game '.$id.'</a>: ';
   foreach my $player ( $me, 1 - $me ) {
     $game_row .= $game->{players}->[$player]->{username}.' ('.${$game->{players}}[$player]->{score}.') vs ';
   }
@@ -200,284 +303,31 @@ sub printable_game {
 
 sub print_board {
   my ( $board_ref ) = @_;
-  my $printable_board = '';
+  my $board_colour = 'lightgray';
+  my $letter_colour = 'black';
+  my $printable_board = "<font color='$board_colour'>";
   foreach my $r ( @$board_ref ) {
     $printable_board .= '+' . '---+' x 15 . "\n";
     my @row = map { $_ ||= ' ' } @$r;
+    @row = map { "<font color='$letter_colour'>$_</font>" } @row;
     $printable_board .= '| ' . join( ' | ', @row ) . " |\n";
   }
-  $printable_board .= '+' . '---+' x 15 . "\n";
+  $printable_board .= '+' . '---+' x 15 . "</font>\n";
   print $q->pre( $printable_board );
-  
-  #pretty_board();
 }
 
-
 sub pretty_board {
-  my ( $board ) = @_;
+  my ( $board_ref ) = @_;
 
-print <<EOQ;
-<table class="board">
-  <tbody>
-    <tr>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="tw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tw">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="tw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tw">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-    </tr>
-    <tr>
-      <td class="tl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="dl">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tw">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="">&nbsp;</td>
-      <td class="tl">&nbsp;</td>
-    </tr>
-  </tbody>
-</table>
-EOQ
-
+  print "<table class='board'>\n";
+  foreach my $r ( @$board_ref ) {
+    print "<tr>\n";
+    my @row = map { $_ ||= ' ' } @$r;
+    @row = map { ( $_ eq ' ' ) ? "<td>$_</td>" : ( lc( $_ ) ne $_ ) ? "<td class='tile'>$_</td>" : "<td class='tile blank'>$_</td>" } @row;
+    print join( "\n", @row );
+    print "</tr>\n";
+  }
+  print "</table>\n";
 }
 
 sub set_my_player {
@@ -507,7 +357,7 @@ sub hit_counter {
     $hits = 0;
   }
   
-  print $q->small( "ardavey 2013<br>" . ++$hits );
+  print $q->small( '&copy; ardavey 2013<br>' . ++$hits . ' page views' );
   
   # attempt to write the new hitcounter value to file
   open HITWRITE, "> wf_hits";
