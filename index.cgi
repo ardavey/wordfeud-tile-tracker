@@ -2,15 +2,17 @@
 use strict;
 use lib qw( /home/ardavey/perlmods );
 
-use Data::Dumper;
-
 use CGI::Pretty;
 use CGI::Cookie;
+
+use Log::Log4perl qw( get_logger );
+use Data::Dumper;
 
 use Wordfeud;
 
 my $q = new CGI;
 my $wf = new Wordfeud;
+my $log = get_logger( 'logger.conf' );
 
 my $debug = 0;
 
@@ -66,22 +68,22 @@ if ( $action eq 'login_form' ) {
              )
 }
 elsif ( $action eq 'do_login' ) {
-  my %cookies = CGI::Cookie->fetch();
-  if ( !exists $cookies{sessionID} ) {
-    if ( $wf->set_session_id( $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) ) ) ) {
-      my $cookie = CGI::Cookie->new(
-        -name => 'sessionID',
-        -value => $wf->get_session_id(),
-        -expires => '+3d',
-      );
-      start_page( $cookie );
-      print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
-    }
-    else {
-      start_page();
-    }
+  my $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
+  if ( $session_id ) {
+    $wf->set_session_id( $session_id );
+    my $cookie = CGI::Cookie->new(
+      -name => 'sessionID',
+      -value => $wf->get_session_id(),
+      -expires => '+3d',
+    );
+    start_page( $cookie );
+    print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
+    redirect( 'game_list' );
   }
-  redirect( 'game_list' );
+  else {
+    start_page();
+    redirect( 'login_page' );
+  }
 }
 elsif ( $action eq 'game_list' ) {
   check_cookie();
@@ -150,7 +152,7 @@ elsif ( $action eq 'show_game' ) {
   my $game = $wf->get_game( $id );
   set_my_player( $game );
   my $me = $game->{my_player};
-  print $q->h3( "Game $id: ".${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
+  print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
                  . ${$game->{players}}[1 - $me]->{username}.' ('.${$game->{players}}[1 - $me]->{score}.')' );
   
   #print $q->pre( Dumper($game) );
@@ -255,6 +257,7 @@ sub start_page {
 sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
   unless ( exists $cookies{sessionID} ) {
+    start_page();
     redirect( 'login_form' );
   }
   $wf->set_session_id( $cookies{sessionID}->{value}->[0] );
@@ -293,7 +296,7 @@ sub printable_game {
   my ( $game ) = @_;
   my $id = $game->{id};
   my $me = $game->{my_player};
-  my $game_row = '<a href="?action=show_game&id='.$id.'">Game '.$id.'</a>: ';
+  my $game_row = '<a href="?action=show_game&id='.$id.'">View</a> ';
   foreach my $player ( $me, 1 - $me ) {
     $game_row .= $game->{players}->[$player]->{username}.' ('.${$game->{players}}[$player]->{score}.') vs ';
   }
