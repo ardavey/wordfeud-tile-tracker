@@ -23,6 +23,7 @@ if ( $action eq 'login_form' ) {
   
   my %cookies = CGI::Cookie->fetch();
   if ( exists $cookies{sessionID} ) {
+    print $q->p( 'Restoring previous session' );
     redirect( 'game_list' );
   }
 
