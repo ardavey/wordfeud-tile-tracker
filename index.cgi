@@ -83,6 +83,7 @@ elsif ( $action eq 'do_login' ) {
   }
   else {
     start_page();
+    print $q->p( 'Failed to log in!' );
     redirect( 'login_page' );
   }
 }
@@ -222,6 +223,12 @@ elsif ( $action eq 'logout' ) {
     -expires => '-1d',
   );
   start_page( $cookie );
+  print $q->p( 'Logging out...' );
+  redirect( 'login_form' );
+}
+else {
+  start_page();
+  print $q->p( 'Invalid action - returning to login page' );
   redirect( 'login_form' );
 }
 
@@ -259,6 +266,7 @@ sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
   unless ( exists $cookies{sessionID} ) {
     start_page();
+    print $q->p( 'Returning to login page' );
     redirect( 'login_form' );
   }
   $wf->set_session_id( $cookies{sessionID}->{value}->[0] );
