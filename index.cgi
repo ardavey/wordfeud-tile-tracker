@@ -21,10 +21,10 @@ my $action = $q->param( "action" ) || 'login_form';
 if ( $action eq 'login_form' ) {
   start_page();
   
-  #my %cookies = CGI::Cookie->fetch();
-  #if ( exists $cookies{sessionID} ) {
-  #  redirect( 'game_list' );
-  #}
+  my %cookies = CGI::Cookie->fetch();
+  if ( exists $cookies{sessionID} ) {
+    redirect( 'game_list' );
+  }
 
   print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow you to view the remaining tiles on any of your current Wordfeud games.' );
@@ -62,10 +62,10 @@ if ( $action eq 'login_form' ) {
   );
   print $q->end_form;
 
-  print $q->p( 'I will try my best not to break the site so that you can continue to use it, but it is of course presented without any guarantees.',
-               'Please report any issues or request features',
-               $q->a( { href => 'http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/' }, 'here' ),
-             )
+  print $q->p(
+    'I will try my best not to break the site so that you can continue to use it, but it is of course presented without any guarantees.',
+    'Please report any issues or request features using the feedback link below.'
+  );
 }
 elsif ( $action eq 'do_login' ) {
   my $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
@@ -74,7 +74,7 @@ elsif ( $action eq 'do_login' ) {
     my $cookie = CGI::Cookie->new(
       -name => 'sessionID',
       -value => $wf->get_session_id(),
-      -expires => '+3d',
+      -expires => '+1d',
     );
     start_page( $cookie );
     print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
@@ -214,22 +214,22 @@ elsif ( $action eq 'show_game' ) {
   print $q->p( 'Board:' );
   pretty_board( \@board );
 }
-#elsif ( $action eq 'logout' ) {
-#  my $cookie = CGI::Cookie->new(
-#    -name => 'sessionID',
-#    -value => '',
-#    -expires => '-1d',
-#  );
-#  start_page( $cookie );
-#  redirect( 'login_form' );
-#}
-#
-#print $q->p(
-#  $q->a(
-#    { href => '?action=logout' },
-#    'Log out',
-#  )
-#);
+elsif ( $action eq 'logout' ) {
+  my $cookie = CGI::Cookie->new(
+    -name => 'sessionID',
+    -value => '',
+    -expires => '-1d',
+  );
+  start_page( $cookie );
+  redirect( 'login_form' );
+}
+
+print $q->small(
+  $q->a(
+    { href => '?action=logout' },
+    'Log out',
+  )
+);
 
 print $q->p( '<a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">Give feedback</a>' );
 hit_counter();
