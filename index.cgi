@@ -136,7 +136,6 @@ elsif ( $action eq 'game_list' ) {
   }
   print $q->end_ul();
   
-  print $q->hr();
 }
 elsif ( $action eq 'show_game' ) {
   check_cookie();
@@ -231,6 +230,8 @@ else {
   print $q->p( 'Invalid action - returning to login page' );
   redirect( 'login_form' );
 }
+
+print $q->hr();
 
 print $q->small(
   $q->a(
