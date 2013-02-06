@@ -2,17 +2,17 @@
 use strict;
 use lib qw( /home/ardavey/perlmods );
 
-use CGI::Pretty;
+use CGI::Pretty qw( -nosticky );
 use CGI::Cookie;
 
-use Log::Log4perl qw( get_logger );
+#use Log::Log4perl qw( get_logger );
 use Data::Dumper;
 
 use Wordfeud;
 
 my $q = new CGI;
 my $wf = new Wordfeud;
-my $log = get_logger( 'logger.conf' );
+#my $log = get_logger( 'logger.conf' );
 
 my $action = $q->param( "action" ) || 'login_form';
 
@@ -68,6 +68,7 @@ sub login_form {
   print $q->start_form(
     -name => 'login_form',
     -method => 'POST',
+    -action => '/',
   );
   print $q->p(
     'Email address: ',
@@ -155,13 +156,13 @@ sub game_list {
   print $q->start_ul();
   print "<li>Your Turn:\n<ul>";
   foreach my $game ( @running_your_turn ) {
-    print $q->li( printable_game( $game ) );
+    print $q->li( game_row( $game ) );
   }
   print "</ul>\n</li>";
   
   print "<li>Their Turn:\n<ul>";
   foreach my $game ( @running_their_turn ) {
-    print $q->li( printable_game( $game ) );
+    print $q->li( game_row( $game ) );
   }
   print "</ul>\n</li>";
   print $q->end_ul();
@@ -170,7 +171,7 @@ sub game_list {
   
   print $q->start_ul();
   foreach my $game ( @complete ) {
-    print $q->li( printable_game( $game ) );
+    print $q->li( game_row( $game ) );
   }
   print $q->end_ul();
 }  
@@ -244,9 +245,12 @@ sub show_game {
   }
   
   print $q->p( 'Your rack:<br>[<code> ' .join( ' ', @rack )." </code>]\n" );
+  #print_rack( \@rack );
+  
   print $q->p( 'Remaining tiles:<br>[<code> '. join( ' ', split( //, $remaining ) ) ." </code>]\n" );
+  
   print $q->p( 'Board:' );
-  pretty_board( \@board );
+  print_board( \@board );
 }
 
 
@@ -322,7 +326,6 @@ sub navigate_button {
   my ( $action, $label ) = @_;
   
   $q->delete_all();
-  
   print $q->p(
     $q->start_form(
       -name => 'navigate_button',
@@ -345,14 +348,13 @@ sub navigate_button {
 }
 
 
-sub printable_game {
+sub game_row {
   my ( $game ) = @_;
   
   my $id = $game->{id};
   my $me = $game->{my_player};
   
   $q->delete_all();
-  
   my $game_link = $q->start_form(
     -name => $id,
     -method => 'POST',
@@ -373,32 +375,19 @@ sub printable_game {
     -name => 'submit_form',
     -value => 'View',
   );
-  
-  #my $game_row = '<a href="?action=show_game&id='.$id.'">View</a> ';
+    
   foreach my $player ( $me, 1 - $me ) {
     $game_link .= ' '.$game->{players}->[$player]->{username}.' ('.${$game->{players}}[$player]->{score}.') vs ';
   }
   $game_link =~ s/ vs $//;
+
+  $game_link .= $q->end_form();
   
   return $game_link;
 }
 
-sub print_board {
-  my ( $board_ref ) = @_;
-  my $board_colour = 'lightgray';
-  my $letter_colour = 'black';
-  my $printable_board = "<font color='$board_colour'>";
-  foreach my $r ( @$board_ref ) {
-    $printable_board .= '+' . '---+' x 15 . "\n";
-    my @row = map { $_ ||= ' ' } @$r;
-    @row = map { "<font color='$letter_colour'>$_</font>" } @row;
-    $printable_board .= '| ' . join( ' | ', @row ) . " |\n";
-  }
-  $printable_board .= '+' . '---+' x 15 . "</font>\n";
-  print $q->pre( $printable_board );
-}
 
-sub pretty_board {
+sub print_board {
   my ( $board_ref ) = @_;
 
   print "<table class='board'>\n";
@@ -410,6 +399,12 @@ sub pretty_board {
     print "</tr>\n";
   }
   print "</table>\n";
+}
+
+sub print_rack {
+  my ( $rack_ref ) = @_;
+  
+  
 }
 
 sub set_my_player {
@@ -430,10 +425,10 @@ sub hit_counter {
   # 'hits' is a txt file where the first row represents the number of hits
   if ( -e "./wf_hits" ) {
     open HITREAD, "< wf_hits";
-    my @in = <HITREAD>;
+    my $in = <HITREAD>;
     close HITREAD;
-    chomp @in;
-    $hits = $in[0];
+    chomp $in;
+    $hits = $in;
   }
   else {
     $hits = 0;
