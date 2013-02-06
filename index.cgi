@@ -14,11 +14,43 @@ my $q = new CGI;
 my $wf = new Wordfeud;
 my $log = get_logger( 'logger.conf' );
 
-my $debug = 0;
-
 my $action = $q->param( "action" ) || 'login_form';
 
 if ( $action eq 'login_form' ) {
+  login_form();
+}
+elsif ( $action eq 'do_login' ) {
+  do_login();
+}
+elsif ( $action eq 'game_list' ) {
+  game_list();
+}
+elsif ( $action eq 'show_game' ) {
+  show_game();
+}
+elsif ( $action eq 'logout' ) {
+  logout();
+}
+else {
+  start_page();
+  print $q->p( 'Invalid action - returning to login page' );
+  redirect( 'login_form' );
+}
+
+print $q->hr();
+
+if ( $action ne 'login_form' ) {
+  navigate_button( 'logout', 'Log out'  );
+}
+
+print $q->p( '<a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">Give feedback</a>' );
+hit_counter();
+
+print $q->end_html();
+
+#-------------------------------------------------------------------------------
+
+sub login_form {
   start_page();
   
   my %cookies = CGI::Cookie->fetch();
@@ -68,7 +100,9 @@ if ( $action eq 'login_form' ) {
     'Please report any issues or request features using the feedback link below.'
   );
 }
-elsif ( $action eq 'do_login' ) {
+
+
+sub do_login {
   my $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
   if ( $session_id ) {
     $wf->set_session_id( $session_id );
@@ -87,7 +121,11 @@ elsif ( $action eq 'do_login' ) {
     redirect( 'login_page' );
   }
 }
-elsif ( $action eq 'game_list' ) {
+
+#-------------------------------------------------------------------------------
+# Display a list of all games which are still registered on the server
+
+sub game_list {
   check_cookie();
   
   my $games = $wf->get_games();
@@ -135,24 +173,19 @@ elsif ( $action eq 'game_list' ) {
     print $q->li( printable_game( $game ) );
   }
   print $q->end_ul();
-  
-}
-elsif ( $action eq 'show_game' ) {
+}  
+
+
+sub show_game {
   check_cookie();
-  
-  print $q->small(
-    $q->a(
-      {
-        href => '?action=game_list',
-      },
-      '<-- back to game list'
-    )
-  );
-  
+
   my $id = $q->param( 'id' );
   my $game = $wf->get_game( $id );
   set_my_player( $game );
   my $me = $game->{my_player};
+
+  navigate_button( 'game_list', '<-- Game list'  );
+
   print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
                  . ${$game->{players}}[1 - $me]->{username}.' ('.${$game->{players}}[1 - $me]->{score}.')' );
   
@@ -215,7 +248,9 @@ elsif ( $action eq 'show_game' ) {
   print $q->p( 'Board:' );
   pretty_board( \@board );
 }
-elsif ( $action eq 'logout' ) {
+
+
+sub logout {
   my $cookie = CGI::Cookie->new(
     -name => 'sessionID',
     -value => '',
@@ -225,27 +260,7 @@ elsif ( $action eq 'logout' ) {
   print $q->p( 'Logging out...' );
   redirect( 'login_form' );
 }
-else {
-  start_page();
-  print $q->p( 'Invalid action - returning to login page' );
-  redirect( 'login_form' );
-}
 
-print $q->hr();
-
-print $q->small(
-  $q->a(
-    { href => '?action=logout' },
-    'Log out',
-  )
-);
-
-print $q->p( '<a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">Give feedback</a>' );
-hit_counter();
-
-print $q->end_html();
-
-#-------------------------------------------------------------------------------
 
 sub start_page {
   my ( $cookie ) = @_;
@@ -263,6 +278,7 @@ sub start_page {
   );
 }
 
+
 sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
   unless ( exists $cookies{sessionID} ) {
@@ -274,6 +290,7 @@ sub check_cookie {
   start_page( $cookies{sessionID} );
 }
 
+
 sub redirect {
   my ( $action ) = @_;
   
@@ -281,37 +298,89 @@ sub redirect {
   print $q->start_form(
     -name => 'redirect_form',
     -method => 'POST',
+    -action => '/',
   );
-
-  print $q->hidden(
-    -name => 'session',
-    -default => $wf->get_session_id(),
-  );    
 
   print $q->hidden(
     -name => 'action',
     -default => $action,
   );
+  
   print $q->p(
     $q->submit(
       -name => 'submit_form',
       -value => 'Continue'
     )
   );
-  print $q->end_form;
+  
+  print $q->end_form();
   print '<SCRIPT LANGUAGE="JavaScript">document.forms[0].submit();</SCRIPT>';
 }
 
+
+sub navigate_button {
+  my ( $action, $label ) = @_;
+  
+  $q->delete_all();
+  
+  print $q->p(
+    $q->start_form(
+      -name => 'navigate_button',
+      -method => 'POST',
+      -action => '/',
+    ),
+  
+    $q->hidden(
+      -name => 'action',
+      -default => $action,
+    ),
+    
+    $q->submit(
+      -name => 'submit_form',
+      -value => $label,
+    ),
+    
+    $q->end_form(),
+  );
+}
+
+
 sub printable_game {
   my ( $game ) = @_;
+  
   my $id = $game->{id};
   my $me = $game->{my_player};
-  my $game_row = '<a href="?action=show_game&id='.$id.'">View</a> ';
+  
+  $q->delete_all();
+  
+  my $game_link = $q->start_form(
+    -name => $id,
+    -method => 'POST',
+    -action => '/',
+  );
+  
+  $game_link .= $q->hidden(
+    -name => 'action',
+    -value => 'show_game',
+  );
+  
+  $game_link .= $q->hidden(
+    -name => 'id',
+    -value => $id,
+  );
+  
+  $game_link .= $q->submit(
+    -name => 'submit_form',
+    -value => 'View',
+  );
+  
+  #my $game_row = '<a href="?action=show_game&id='.$id.'">View</a> ';
   foreach my $player ( $me, 1 - $me ) {
-    $game_row .= $game->{players}->[$player]->{username}.' ('.${$game->{players}}[$player]->{score}.') vs ';
+    $game_link .= ' '.$game->{players}->[$player]->{username}.' ('.${$game->{players}}[$player]->{score}.') vs ';
   }
-  $game_row =~ s/ vs $//;
-  return $game_row;
+  $game_link =~ s/ vs $//;
+  
+  return $game_link;
 }
 
 sub print_board {
