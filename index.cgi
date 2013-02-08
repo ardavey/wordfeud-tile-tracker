@@ -98,6 +98,7 @@ sub login_form {
 
   print $q->p(
     'I will try my best not to break the site so that you can continue to use it, but it is of course presented without any guarantees.',
+    'If you visit the site at some time and the colours/layout look weird, try a full refresh (Shift-Refresh or Ctrl-Refresh, depending on your browser) to reload the stylesheet.',
     'Please report any issues or request features using the feedback link below.'
   );
 }
@@ -150,6 +151,8 @@ sub game_list {
     }
   }
 
+  navigate_button( 'game_list', 'Reload game list'  );
+
   print $q->hr();
   print $q->h3( 'Running Games:' );
 
@@ -187,6 +190,7 @@ sub show_game {
 
   navigate_button( 'game_list', '<-- Game list'  );
 
+  print $q->hr();
   print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
                  . ${$game->{players}}[1 - $me]->{username}.' ('.${$game->{players}}[1 - $me]->{score}.')' );
   
@@ -195,12 +199,12 @@ sub show_game {
   my @seen_tiles = ();
   my @board = ();
   my @rack = ();
+  my @players = ();
   
   # create an empty board
   foreach my $r ( 0..14 ) {
     $board[$r] = [qw( 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 )];
   }
-  my @players = ();
   
   foreach my $player ( @{$game->{players}} ) {
     if ( exists $player->{rack} ) {
@@ -239,18 +243,25 @@ sub show_game {
     }
   }
   
-  my $remaining = '';
+  my @remaining = ();
   foreach my $letter ( sort keys %$avail ) {
-    $remaining .= $letter x $avail->{$letter};
+    foreach ( 1..$avail->{$letter} ) {
+      push @remaining, $letter;
+    }
   }
   
-  print $q->p( 'Your rack:<br>[<code> ' .join( ' ', @rack )." </code>]\n" );
-  #print_rack( \@rack );
+  print $q->p( 'Your rack:' );
+  print_rack( \@rack );
   
-  print $q->p( 'Remaining tiles:<br>[<code> '. join( ' ', split( //, $remaining ) ) ." </code>]\n" );
+  print $q->p( 'Remaining tiles:' );
+  print_remaining( \@remaining );
   
   print $q->p( 'Board:' );
   print_board( \@board );
+  
+  #print $q->hr();
+  #my @chat = $wf->get_chat_messages( $id );
+  #print "<pre>".Dumper( \@chat )."</pre>";
 }
 
 
@@ -389,7 +400,7 @@ sub game_row {
 
 sub print_board {
   my ( $board_ref ) = @_;
-
+  
   print "<table class='board'>\n";
   foreach my $r ( @$board_ref ) {
     print "<tr>\n";
@@ -402,9 +413,26 @@ sub print_board {
 }
 
 sub print_rack {
-  my ( $rack_ref ) = @_;
-  
-  
+  my ( $rack ) = @_;
+  print "<table><tr>\n";
+  foreach my $tile ( @$rack ) {
+    print "<td class='rack'>$tile</td>\n";
+  }
+  print "</tr></table>\n";
+}
+
+sub print_remaining {
+  my ( $remaining ) = @_;
+  my $count = 0;
+  print "<table><tr>\n";
+  while ( my $tile = shift @$remaining ) {
+    $count++;
+    print "<td class='rack'>$tile</td>\n";
+    if ( $count % 13 == 0 ) {
+      print "</tr>\n<tr>\n";
+    }
+  }
+  print "</tr></table>\n";
 }
 
 sub set_my_player {

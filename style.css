@@ -2,28 +2,39 @@ html {
   font-family: sans-serif;
 }
 
+body {
+  background-color: #eef;
+}
+
 table.board {
-  border: 1px solid black;
+  border: 0.1em solid black;
   border-collapse: collapse;
   padding: 0;
   font-family: monospace;
 }
 
+td.rack {
+  border: 0.1em solid #cca;
+  width: 1.5em;
+  height: 1.5em;
+  background-color: #ffd;
+  text-align: center;
+  vertical-align: middle;
+  font-family: monospace;
+}
+
 td {
-  background-color: #353949;
-  border: 1px solid black;  
+  background-color: #445;
+  border: 0.1em solid black;  
   padding: 0;
   width: 1.5em;
   height: 1.5em;
 }
 
 td.tile {
-  background-color: #fff8c2;
+  background-color: #ffd;
   text-align: center;
   vertical-align: middle;
-  -moz-border-radius: 0 6px 0 0;
-  -webkit-border-radius: 0 6px 0 0;
-  border-radius: 0 6px 0 0;
 }
 
 td.blank {
