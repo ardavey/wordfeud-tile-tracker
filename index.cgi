@@ -399,14 +399,43 @@ sub game_row {
 
 
 sub print_board {
-  my ( $board_ref ) = @_;
+  my ( $board ) = @_;
+  
+  my @board_map = (
+    [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
+    [ qw( e dl e e e tl e e e tl e e e dl e ) ],
+    [ qw( e e dw e e e dl e dl e e e dw e e ) ],
+    [ qw( e e e tl e e e dw e e e tl e e e ) ],
+    [ qw( tw e e e dw e dl e dl e dw e e e tw ) ],
+    [ qw( e tl e e e tl e e e tl e e e tl e ) ],
+    [ qw( e e dl e dl e e e e e dl e dl e e ) ],
+    [ qw( dl e e dw e e e e e e e dw e e dl ) ],
+    [ qw( e e dl e dl e e e e e dl e dl e e ) ],
+    [ qw( e tl e e e tl e e e tl e e e tl e ) ],
+    [ qw( tw e e e dw e dl e dl e dw e e e tw ) ],
+    [ qw( e e e tl e e e dw e e e tl e e e ) ],
+    [ qw( e e dw e e e dl e dl e e e dw e e ) ],
+    [ qw( e dl e e e tl e e e tl e e e dl e ) ],
+    [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
+  );
   
   print "<table class='board'>\n";
-  foreach my $r ( @$board_ref ) {
+  foreach my $r ( 0..14 ) {
     print "<tr>\n";
-    my @row = map { $_ ||= ' ' } @$r;
-    @row = map { ( $_ eq ' ' ) ? "<td>$_</td>" : ( lc( $_ ) ne $_ ) ? "<td class='tile'>$_</td>" : "<td class='tile blank'>$_</td>" } @row;
-    print join( "\n", @row );
+    my @row = map { $_ ||= ' ' } @{$board->[$r]};
+    foreach my $c ( 0..14 ) {
+      if ( $row[$c] eq ' ' ) {
+        print "<td class='$board_map[$r][$c]'>";
+      }
+      elsif ( $row[$c] ne lc( $row[$c] ) ) {
+        print "<td class='tile'>";
+      }
+      else {
+        print "<td class='tile blank'>";
+      }
+      print "$board->[$r][$c]</td>\n";
+      
+    }
     print "</tr>\n";
   }
   print "</table>\n";

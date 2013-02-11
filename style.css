@@ -24,7 +24,6 @@ td.rack {
 }
 
 td {
-  background-color: #445;
   border: 0.1em solid black;  
   padding: 0;
   width: 1.5em;
@@ -39,6 +38,10 @@ td.tile {
 
 td.blank {
   color: red;
+}
+
+td.e {
+  background-color: #445;
 }
 
 td.tw {
