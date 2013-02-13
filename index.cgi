@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# -*-perl-*-
 
 # Wordfeud Tile Tracker
 #
