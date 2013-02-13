@@ -1,4 +1,12 @@
 #!/usr/bin/perl -w
+
+# Wordfeud Tile Tracker
+#
+# A simple CGI which allows the user to see the state of play
+# on any of their active Wordfeud games, and view remaining tiles.
+#
+# Copyright 2013 Andrew Davey
+
 use strict;
 use lib qw( /home/ardavey/perlmods );
 
