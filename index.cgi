@@ -57,6 +57,8 @@ hit_counter();
 print $q->end_html();
 
 #-------------------------------------------------------------------------------
+# Display the login form or, if the sessionID cookie is found, attempt to restore
+# the previous session
 
 sub login_form {
   start_page();
@@ -166,14 +168,24 @@ sub game_list {
 
   print $q->start_ul();
   print "<li>Your Turn:\n<ul>";
-  foreach my $game ( @running_your_turn ) {
-    print $q->li( game_row( $game ) );
+  if ( scalar @running_your_turn ) {
+    foreach my $game ( @running_your_turn ) {
+      print $q->li( game_row( $game ) );
+    }
+  }
+  else {
+    print $q->li( '<i>No games</i>' );
   }
   print "</ul>\n</li>";
   
   print "<li>Their Turn:\n<ul>";
-  foreach my $game ( @running_their_turn ) {
-    print $q->li( game_row( $game ) );
+  if ( scalar @running_their_turn ) {
+    foreach my $game ( @running_their_turn ) {
+      print $q->li( game_row( $game ) );
+    }
+  }
+  else {
+    print $q->li( '<i>No games</i>' );
   }
   print "</ul>\n</li>";
   print $q->end_ul();
@@ -181,12 +193,20 @@ sub game_list {
   print $q->h3( 'Recently Completed Games:' );
   
   print $q->start_ul();
-  foreach my $game ( @complete ) {
-    print $q->li( game_row( $game ) );
+  
+  if ( scalar @complete ) {
+    foreach my $game ( @complete ) {
+      print $q->li( game_row( $game ) );
+    }
+  }
+  else {
+    print $q->li( '<i>No games</i>' );
   }
   print $q->end_ul();
 }  
 
+#-------------------------------------------------------------------------------
+# Show the details for a specific game
 
 sub show_game {
   check_cookie();
@@ -417,7 +437,7 @@ sub print_board {
     [ qw( tw e e e dw e dl e dl e dw e e e tw ) ],
     [ qw( e tl e e e tl e e e tl e e e tl e ) ],
     [ qw( e e dl e dl e e e e e dl e dl e e ) ],
-    [ qw( dl e e dw e e e e e e e dw e e dl ) ],
+    [ qw( dl e e dw e e e c e e e dw e e dl ) ],
     [ qw( e e dl e dl e e e e e dl e dl e e ) ],
     [ qw( e tl e e e tl e e e tl e e e tl e ) ],
     [ qw( tw e e e dw e dl e dl e dw e e e tw ) ],
