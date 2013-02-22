@@ -13,14 +13,13 @@ use lib qw( /home/ardavey/perlmods );
 use CGI::Pretty qw( -nosticky );
 use CGI::Cookie;
 
-#use Log::Log4perl qw( get_logger );
 use Data::Dumper;
 
 use Wordfeud;
 
 my $q = new CGI;
 my $wf = new Wordfeud;
-#my $log = get_logger( 'logger.conf' );
+my $log = $wf->get_log();
 
 my $action = $q->param( "action" ) || 'login_form';
 
@@ -64,11 +63,14 @@ sub login_form {
   start_page();
   
   my %cookies = CGI::Cookie->fetch();
-  if ( exists $cookies{sessionID} ) {
+  if ( $cookies{sessionID} ) {
     print $q->p( 'Restoring previous session' );
     redirect( 'game_list' );
   }
 
+  Log::Log4perl::MDC->put('session', 'no session' );
+  $log->info( 'Login form' );
+  
   print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow you to view the remaining tiles on any of your current Wordfeud games.' );
   print $q->p( 'The site is under active development, and will change and evolve with no notice.  I plan to get all of the functionality in place before I "pretty it up" - function over form!' );
@@ -255,7 +257,7 @@ sub show_game {
 
   my $avail = {};
   
-  foreach my $letter ( split( //, $Wordfeud::distribution ) ) {
+  foreach my $letter ( split( //, $wf->get_distribution() ) ) {
     if ( $avail->{$letter} ) {
       $avail->{$letter}++;
     }
@@ -300,6 +302,7 @@ sub logout {
     -expires => '-1d',
   );
   start_page( $cookie );
+  $wf->log_out();
   print $q->p( 'Logging out...' );
   redirect( 'login_form' );
 }
@@ -324,7 +327,7 @@ sub start_page {
 
 sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
-  unless ( exists $cookies{sessionID} ) {
+  unless ( $cookies{sessionID} ) {
     start_page();
     print $q->p( 'Returning to login page' );
     redirect( 'login_form' );
