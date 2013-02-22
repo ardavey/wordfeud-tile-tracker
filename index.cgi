@@ -218,7 +218,7 @@ sub show_game {
   set_my_player( $game );
   my $me = $game->{my_player};
 
-  navigate_button( 'game_list', '<-- Game list'  );
+  navigate_button( 'game_list', 'Game list'  );
 
   print $q->hr();
   print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
@@ -226,35 +226,18 @@ sub show_game {
   
   #print $q->pre( Dumper($game) );
 
-  my @seen_tiles = ();
   my @board = ();
   my @rack = ();
   my @players = ();
   
-  # create an empty board
+  # Create an empty board - a 15x15 array. Well, an array of anonymous array references.
+  # We're going to use this to print out the board later.
   foreach my $r ( 0..14 ) {
     $board[$r] = [qw( 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 )];
   }
   
-  foreach my $player ( @{$game->{players}} ) {
-    if ( exists $player->{rack} ) {
-      @rack = @{$player->{rack}};
-      @rack = map { $_ = ( length $_ ) ? $_ : '?' } @rack;
-      push @seen_tiles, @rack;
-    }
-  }
-  
-  foreach my $tile ( @{$game->{tiles}} ) {
-    if ( @$tile[3] ) {
-      @board[@$tile[1]]->[@$tile[0]] = lc( @$tile[2] );
-      push @seen_tiles, '?';
-    }
-    else { 
-      @board[@$tile[1]]->[@$tile[0]] = @$tile[2];
-      push @seen_tiles, @$tile[2];
-    }
-  }
-
+  # Build a hash to track the available tiles. Start with all of them, and then
+  # deduct those which are visible on the logged in player's rack and the board
   my $avail = {};
   
   foreach my $letter ( split( //, $wf->get_distribution() ) ) {
@@ -265,14 +248,35 @@ sub show_game {
       $avail->{$letter} = 1;
     }
   }
-  
-  foreach my $letter ( @seen_tiles ) {
-    $avail->{$letter}--;
-    if ( $avail->{$letter} == 0 ) {
-      delete $avail->{$letter};
+
+  # Determine the logged in player's rack
+  foreach my $player ( @{$game->{players}} ) {
+    if ( exists $player->{rack} ) {
+      @rack = @{$player->{rack}};
+      @rack = map { $_ = ( length $_ ) ? $_ : '?' } @rack;
+      foreach my $tile ( @rack ) {
+        $avail->{$tile}--;
+      }
+      last;
     }
   }
   
+  # Now we're going to populate our board array, and deduct all of the tiles on
+  # the board from the overall tile distribution
+  foreach my $tile ( @{$game->{tiles}} ) {
+    my @tile_params = @$tile;
+    if ( $tile_params[3] ) {
+      # This denotes that the current tile is a wildcard
+      @board[$tile_params[1]]->[$tile_params[0]] = lc( $tile_params[2] );
+      $avail->{'?'}--;
+    }
+    else {
+      @board[$tile_params[1]]->[$tile_params[0]] = $tile_params[2];
+      $avail->{$tile_params[2]}--;
+    }
+  }
+  
+  # Finally, build an array of the remaining tiles
   my @remaining = ();
   foreach my $letter ( sort keys %$avail ) {
     foreach ( 1..$avail->{$letter} ) {
@@ -431,7 +435,10 @@ sub game_row {
 
 sub print_board {
   my ( $board ) = @_;
-  
+
+  # This 2D array represents the style to be applied to the respective squares on the board.
+  # This is pretty ugly and evil, but it's amazing what you can come up with in a spare half
+  # hour in Starbucks!
   my @board_map = (
     [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
     [ qw( e dl e e e tl e e e tl e e e dl e ) ],
@@ -513,10 +520,9 @@ sub hit_counter {
   # 'hits' is a txt file where the first row represents the number of hits
   if ( -e "./wf_hits" ) {
     open HITREAD, "< wf_hits";
-    my $in = <HITREAD>;
+    $hits = <HITREAD>;
     close HITREAD;
-    chomp $in;
-    $hits = $in;
+    chomp $hits;
   }
   else {
     $hits = 0;

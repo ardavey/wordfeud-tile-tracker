@@ -21,6 +21,7 @@ td.rack {
   text-align: center;
   vertical-align: middle;
   font-family: monospace;
+  border-radius: 5px !important;
 }
 
 td {
