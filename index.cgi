@@ -502,7 +502,7 @@ sub print_remaining {
   # so tailor the output accordingly
   if ( $remain_count > 7 ) {
     my $bag_count = $remain_count - 7;
-    $remain_text = "Remaining tiles (66):<br><small><i>Bag: $bag_count; Their rack: 7</i></small>";
+    $remain_text = "Remaining tiles ($remain_count):<br><small><i>Bag: $bag_count; Their rack: 7</i></small>";
   }
   else {
     $remain_text = 'Their rack:';
