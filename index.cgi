@@ -284,13 +284,10 @@ sub show_game {
     }
   }
   
-  print $q->p( 'Your rack:' );
   print_rack( \@rack );
   
-  print $q->p( 'Remaining tiles:' );
   print_remaining( \@remaining );
   
-  print $q->p( 'Board:' );
   print_board( \@board );
   
   #print $q->hr();
@@ -457,6 +454,7 @@ sub print_board {
     [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
   );
   
+  print $q->p( 'Board:' );
   print "<table class='board'>\n";
   foreach my $r ( 0..14 ) {
     print "<tr>\n";
@@ -481,25 +479,51 @@ sub print_board {
 
 sub print_rack {
   my ( $rack ) = @_;
-  print "<table><tr>\n";
-  foreach my $tile ( @$rack ) {
-    print "<td class='rack'>$tile</td>\n";
+  print $q->p( 'Your rack:' );
+  if ( scalar @$rack ) {
+    print "<table><tr>\n";
+    foreach my $tile ( @$rack ) {
+      print "<td class='rack'>$tile</td>\n";
+    }
+    print "</tr></table>\n";
   }
-  print "</tr></table>\n";
+  else {
+    print $q->p( '<i>Empty</i>' );
+  }
 }
 
 sub print_remaining {
   my ( $remaining ) = @_;
   my $count = 0;
-  print "<table><tr>\n";
-  while ( my $tile = shift @$remaining ) {
-    $count++;
-    print "<td class='rack'>$tile</td>\n";
-    if ( $count % 13 == 0 ) {
-      print "</tr>\n<tr>\n";
-    }
+  my $remain_count = scalar @$remaining;
+  my $remain_text = '';
+  
+  # If there are 7 or fewer tiles remaining, we know that they're all in the opponent's rack,
+  # so tailor the output accordingly
+  if ( $remain_count > 7 ) {
+    my $bag_count = $remain_count - 7;
+    $remain_text = "Remaining tiles (66):<br><small><i>Bag: $bag_count; Their rack: 7</i></small>";
   }
-  print "</tr></table>\n";
+  else {
+    $remain_text = 'Their rack:';
+  }
+  
+  print $q->p( $remain_text );
+  
+  if ( scalar @$remaining ) {
+    print "<table><tr>\n";
+    while ( my $tile = shift @$remaining ) {
+      $count++;
+      print "<td class='rack'>$tile</td>\n";
+      if ( $count % 10 == 0 ) {
+        print "</tr>\n<tr>\n";
+      }
+    }
+    print "</tr></table>\n";
+  }
+  else {
+    print $q->p( '<i>Empty</i>' );
+  }
 }
 
 sub set_my_player {
