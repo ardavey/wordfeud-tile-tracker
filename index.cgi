@@ -284,9 +284,8 @@ sub show_game {
     }
   }
   
-  print_rack( \@rack );
-  
-  print_remaining( \@remaining );
+  print_tiles( \@rack, '<u>Your rack:</u>' );
+  print_tiles( \@remaining, '<u>Their rack:</u>' );
   
   print_board( \@board );
   
@@ -429,6 +428,34 @@ sub game_row {
   return $game_link;
 }
 
+sub print_tiles {
+  my ( $tiles, $label ) = @_;
+  my $tile_count = scalar @$tiles;
+  
+  # If there are more than 7 tiles, we know that we're displaying the bag/opponent's rack combo so tailor the label accordingly
+  if ( $tile_count > 7 ) {
+    my $bag_count = $tile_count - 7;
+    $label = "<u>Remaining tiles ($tile_count):</u><br><small><i>Bag: $bag_count; Their rack: 7</i></small>";
+  }
+  
+  print $q->p( $label );
+  
+  my $count = 0;
+  if ( $tile_count ) {
+    print "<table><tr>\n";
+    while ( my $tile = shift @$tiles ) {
+      $count++;
+      print "<td class='rack'>$tile</td>\n";
+      if ( $count % 10 == 0 ) {
+        print "</tr>\n<tr>\n";
+      }
+    }
+    print "</tr></table>\n";
+  }
+  else {
+    print $q->p( '<i>Empty</i>' );
+  }
+}
 
 sub print_board {
   my ( $board ) = @_;
@@ -454,7 +481,7 @@ sub print_board {
     [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
   );
   
-  print $q->p( 'Board:' );
+  print $q->p( '<u>Board:</u>' );
   print "<table class='board'>\n";
   foreach my $r ( 0..14 ) {
     print "<tr>\n";
@@ -475,55 +502,6 @@ sub print_board {
     print "</tr>\n";
   }
   print "</table>\n";
-}
-
-sub print_rack {
-  my ( $rack ) = @_;
-  print $q->p( 'Your rack:' );
-  if ( scalar @$rack ) {
-    print "<table><tr>\n";
-    foreach my $tile ( @$rack ) {
-      print "<td class='rack'>$tile</td>\n";
-    }
-    print "</tr></table>\n";
-  }
-  else {
-    print $q->p( '<i>Empty</i>' );
-  }
-}
-
-sub print_remaining {
-  my ( $remaining ) = @_;
-  my $count = 0;
-  my $remain_count = scalar @$remaining;
-  my $remain_text = '';
-  
-  # If there are 7 or fewer tiles remaining, we know that they're all in the opponent's rack,
-  # so tailor the output accordingly
-  if ( $remain_count > 7 ) {
-    my $bag_count = $remain_count - 7;
-    $remain_text = "Remaining tiles ($remain_count):<br><small><i>Bag: $bag_count; Their rack: 7</i></small>";
-  }
-  else {
-    $remain_text = 'Their rack:';
-  }
-  
-  print $q->p( $remain_text );
-  
-  if ( scalar @$remaining ) {
-    print "<table><tr>\n";
-    while ( my $tile = shift @$remaining ) {
-      $count++;
-      print "<td class='rack'>$tile</td>\n";
-      if ( $count % 10 == 0 ) {
-        print "</tr>\n<tr>\n";
-      }
-    }
-    print "</tr></table>\n";
-  }
-  else {
-    print $q->p( '<i>Empty</i>' );
-  }
 }
 
 sub set_my_player {
