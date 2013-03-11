@@ -50,7 +50,7 @@ if ( $action ne 'login_form' ) {
   navigate_button( 'logout', 'Log out'  );
 }
 
-print $q->p( '<a href="http://www.ardavey.com/2013/01/21/automated-tile-tracker-beta/">Give feedback</a>' );
+print $q->p( '<a href="http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/">Give feedback</a>' );
 hit_counter();
 
 print $q->end_html();
