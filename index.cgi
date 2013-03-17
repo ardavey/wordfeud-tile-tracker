@@ -115,6 +115,9 @@ sub login_form {
   );
 }
 
+#-------------------------------------------------------------------------------
+# Actually submit the login request, then redirect to the game list if successful.
+# This way, we avoid sending a new login request every time the game list page is refreshed
 
 sub do_login {
   my $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
@@ -294,6 +297,9 @@ sub show_game {
   #print "<pre>".Dumper( \@chat )."</pre>";
 }
 
+#-------------------------------------------------------------------------------
+# This just clears the cookie - there's nothing to do server-side.  People like
+# the peace of mind associated with being able to "remove any details" about a site
 
 sub logout {
   my $cookie = CGI::Cookie->new(
@@ -307,7 +313,8 @@ sub logout {
   redirect( 'login_form' );
 }
 
-
+#-------------------------------------------------------------------------------
+# Very basic start of page stuff
 sub start_page {
   my ( $cookie ) = @_;
   
@@ -324,6 +331,8 @@ sub start_page {
   );
 }
 
+#-------------------------------------------------------------------------------
+# Checks if we have a valid cookie - if not, we redirect to the login page
 
 sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
@@ -336,6 +345,8 @@ sub check_cookie {
   start_page( $cookies{sessionID} );
 }
 
+#-------------------------------------------------------------------------------
+# Really janky auto-redirect HTML page
 
 sub redirect {
   my ( $action ) = @_;
@@ -363,6 +374,8 @@ sub redirect {
   print '<SCRIPT LANGUAGE="JavaScript">document.forms[0].submit();</SCRIPT>';
 }
 
+#-------------------------------------------------------------------------------
+# Generate a button for navigating to one of the other pages
 
 sub navigate_button {
   my ( $action, $label ) = @_;
@@ -389,6 +402,8 @@ sub navigate_button {
   );
 }
 
+#-------------------------------------------------------------------------------
+# Returns the HTML to show a game on the game list page
 
 sub game_row {
   my ( $game ) = @_;
@@ -417,16 +432,34 @@ sub game_row {
     -name => 'submit_form',
     -value => 'View',
   );
-    
+  
+  my $colour = undef;
+  
+  if ( ${$game->{players}}[$me]->{score} > ${$game->{players}}[1 - $me]->{score} ) {
+    $colour = '#bfb';
+  }
+  elsif ( ${$game->{players}}[$me]->{score} < ${$game->{players}}[1 - $me]->{score} ) {
+    $colour = '#fbb';
+  }
+  
+  if ( $colour ) {
+    $game_link .= "<font color='$colour'>";
+  }
   foreach my $player ( $me, 1 - $me ) {
     $game_link .= ' '.$game->{players}->[$player]->{username}.' ('.${$game->{players}}[$player]->{score}.') vs ';
   }
   $game_link =~ s/ vs $//;
+  if ( $colour ) {
+    $game_link .= '</font>';
+  }
 
   $game_link .= $q->end_form();
   
   return $game_link;
 }
+
+#-------------------------------------------------------------------------------
+# Prints the provided array of letters in rows of 10
 
 sub print_tiles {
   my ( $tiles, $label ) = @_;
@@ -456,6 +489,9 @@ sub print_tiles {
     print $q->p( '<i>Empty</i>' );
   }
 }
+
+#-------------------------------------------------------------------------------
+# Hacky generation of HTML to show the pretty coloured board, and played tiles
 
 sub print_board {
   my ( $board ) = @_;
@@ -504,6 +540,10 @@ sub print_board {
   print "</table>\n";
 }
 
+#-------------------------------------------------------------------------------
+# Utility method to set the ID of "you" - used for ordering names on game list
+# so that the logged in player is always shown first
+
 sub set_my_player {
   my ( $game ) = @_;
   my $current_player = $game->{current_player};
@@ -515,8 +555,10 @@ sub set_my_player {
   }
 }
 
+#-------------------------------------------------------------------------------
+# Very simple hit counter - I want to see if anyone else is using this!
+
 sub hit_counter {  
-  # very simple hit counter - I want to see if anyone else is using this!
   my $hits;
   
   # 'hits' is a txt file where the first row represents the number of hits

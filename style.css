@@ -1,9 +1,10 @@
 html {
   font-family: sans-serif;
+  color: #fff;
 }
 
 body {
-  background-color: #eef;
+  background-color: #222;
 }
 
 table.board {
@@ -11,6 +12,7 @@ table.board {
   border-collapse: collapse;
   padding: 0;
   font-family: monospace;
+  color: #000;
 }
 
 td.rack {
@@ -21,11 +23,12 @@ td.rack {
   text-align: center;
   vertical-align: middle;
   font-family: monospace;
+  color: #000;
   border-radius: 5px !important;
 }
 
 td {
-  border: 0.1em solid black;  
+  border: 0.1em solid #333;  
   padding: 0;
   width: 1.5em;
   height: 1.5em;
