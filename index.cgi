@@ -44,8 +44,6 @@ else {
   redirect( 'login_form' );
 }
 
-print $q->hr();
-
 if ( $action ne 'login_form' ) {
   navigate_button( 'logout', 'Log out'  );
 }
@@ -168,7 +166,6 @@ sub game_list {
 
   navigate_button( 'game_list', 'Reload game list'  );
 
-  print $q->hr();
   print $q->h3( 'Running Games:' );
 
   print $q->start_ul();
@@ -223,8 +220,7 @@ sub show_game {
 
   navigate_button( 'game_list', 'Game list'  );
 
-  print $q->hr();
-  print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.')<br/> vs '
+  print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
                  . ${$game->{players}}[1 - $me]->{username}.' ('.${$game->{players}}[1 - $me]->{score}.')' );
   
   #print $q->pre( Dumper($game) );
@@ -318,17 +314,24 @@ sub logout {
 sub start_page {
   my ( $cookie ) = @_;
   
-  if ( $cookie ) {
-    print $q->header( -cookie => $cookie );
-  }
-  else {
-    print $q->header();
-  }
+  my %headers = (
+#    '-type' => 'application/xhtml+xml',
+    '-charset' => 'utf-8',
+  );
   
-  print $q->start_html(
+  if ( $cookie ) {
+    $headers{ '-cookie' } = $cookie;
+  }
+  print $q->header( %headers );
+  
+  my $html = $q->start_html(
     -title => 'Wordfeud Tile Information',
     -style => { 'src' => 'style.css' },
   );
+  
+  my $dtd = '<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd">';
+  $html =~ s/<!DOCTYPE.*?>/$dtd/s;
+  print $html;
 }
 
 #-------------------------------------------------------------------------------
@@ -371,7 +374,7 @@ sub redirect {
   );
   
   print $q->end_form();
-  print '<SCRIPT LANGUAGE="JavaScript">document.forms[0].submit();</SCRIPT>';
+  print '<script type="text/javascript">document.forms[0].submit();</script>';
 }
 
 #-------------------------------------------------------------------------------
@@ -462,7 +465,7 @@ sub print_tiles {
   # If there are more than 7 tiles, we know that we're displaying the bag/opponent's rack combo so tailor the label accordingly
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
-    $label = "<u>Remaining tiles ($tile_count):</u><br><small><i>Bag: $bag_count; Their rack: 7</i></small>";
+    $label = "<u>Remaining tiles ($tile_count):</u><br/><small><i>Bag: $bag_count; Their rack: 7</i></small>";
   }
   
   print $q->p( $label );
@@ -566,7 +569,7 @@ sub hit_counter {
     $hits = 0;
   }
   
-  print $q->small( '&copy; ardavey 2013<br>' . ++$hits . ' page views' );
+  print $q->small( '&#169; ardavey 2013<br/>' . ++$hits . ' page views' );
   
   # attempt to write the new hitcounter value to file
   open HITWRITE, "> wf_hits";
