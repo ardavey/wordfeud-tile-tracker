@@ -48,7 +48,8 @@ if ( $action ne 'login_form' ) {
   navigate_button( 'logout', 'Log out'  );
 }
 
-print $q->p( '<a href="http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/">Give feedback</a>' );
+print $q->p( $q->a( { href => "http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/" }, "Leave feedback" ) );
+
 hit_counter();
 
 print $q->end_html();
@@ -324,14 +325,13 @@ sub start_page {
   }
   print $q->header( %headers );
   
-  my $html = $q->start_html(
+  $q->default_dtd( '-//WAPFORUM//DTD XHTML Mobile 1.2//EN http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd' );
+  print $q->start_html(
+    -dtd => 1,
     -title => 'Wordfeud Tile Information',
     -style => { 'src' => 'style.css' },
   );
   
-  my $dtd = '<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd">';
-  $html =~ s/<!DOCTYPE.*?>/$dtd/s;
-  print $html;
 }
 
 #-------------------------------------------------------------------------------
