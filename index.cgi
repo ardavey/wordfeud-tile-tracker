@@ -163,8 +163,8 @@ sub game_list {
   print $q->hr();
   print $q->h3( 'Running Games:' );
 
+  print $q->h4( 'Your Turn:' );
   print $q->start_ul();
-  print "<li>Your Turn:\n<ul>";
   if ( scalar @running_your_turn ) {
     foreach my $game ( @running_your_turn ) {
       print $q->li( game_row( $game ) );
@@ -173,9 +173,10 @@ sub game_list {
   else {
     print $q->li( '<i>No games</i>' );
   }
-  print "</ul>\n</li>";
+  print $q->end_ul();
   
-  print "<li>Their Turn:\n<ul>";
+  print $q->h4( 'Their Turn:' );
+  print $q->start_ul();
   if ( scalar @running_their_turn ) {
     foreach my $game ( @running_their_turn ) {
       print $q->li( game_row( $game ) );
@@ -190,7 +191,6 @@ sub game_list {
   print $q->h3( 'Recently Completed Games:' );
   
   print $q->start_ul();
-  
   if ( scalar @complete ) {
     foreach my $game ( @complete ) {
       print $q->li( game_row( $game ) );
@@ -325,6 +325,7 @@ sub start_page {
     -dtd => 1,
     -title => 'Wordfeud Tile Information',
     -style => { 'src' => 'style.css' },
+    -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
   );
 }
 
