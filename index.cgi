@@ -44,15 +44,7 @@ else {
   redirect( 'login_form' );
 }
 
-if ( $action ne 'login_form' ) {
-  navigate_button( 'logout', 'Log out'  );
-}
-
-print $q->p( $q->a( { href => "http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/" }, "Leave feedback" ) );
-
-hit_counter();
-
-print $q->end_html();
+end_page();
 
 #-------------------------------------------------------------------------------
 # Display the login form or, if the sessionID cookie is found, attempt to restore
@@ -71,6 +63,7 @@ sub login_form {
   $log->info( 'Login form' );
   
   print $q->h2( 'Wordfeud Tile Tracker' );
+  print $q->hr();
   print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow you to view the remaining tiles on any of your current Wordfeud games.' );
   print $q->p( 'The site is under active development, and will change and evolve with no notice.  I plan to get all of the functionality in place before I "pretty it up" - function over form!' );
   print $q->p( 'Please enter your Wordfeud credentials.  These are only used to talk to the game server, and are NOT stored anywhere.' );
@@ -167,6 +160,7 @@ sub game_list {
 
   navigate_button( 'game_list', 'Reload game list'  );
 
+  print $q->hr();
   print $q->h3( 'Running Games:' );
 
   print $q->start_ul();
@@ -220,7 +214,8 @@ sub show_game {
   my $me = $game->{my_player};
 
   navigate_button( 'game_list', 'Game list'  );
-
+  
+  print $q->hr();
   print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
                  . ${$game->{players}}[1 - $me]->{username}.' ('.${$game->{players}}[1 - $me]->{score}.')' );
   
@@ -331,7 +326,6 @@ sub start_page {
     -title => 'Wordfeud Tile Information',
     -style => { 'src' => 'style.css' },
   );
-  
 }
 
 #-------------------------------------------------------------------------------
@@ -515,26 +509,29 @@ sub print_board {
   );
   
   print $q->p( '<u>Board:</u>' );
-  print "<table class='board'>\n";
+  
+  my $table_html = "<table class='board'>\n";
   foreach my $r ( 0..14 ) {
-    print "<tr>\n";
+    $table_html .= "<tr>\n";
     my @row = map { $_ ||= ' ' } @{$board->[$r]};
     foreach my $c ( 0..14 ) {
       if ( $row[$c] eq ' ' ) {
-        print "<td class='$board_map[$r][$c]'>";
+        $table_html .= "<td class='$board_map[$r][$c]'>";
       }
       elsif ( $row[$c] ne lc( $row[$c] ) ) {
-        print "<td class='tile'>";
+        $table_html .= "<td class='tile'>";
       }
       else {
-        print "<td class='tile blank'>";
+        $table_html .= "<td class='tile blank'>";
       }
-      print "$board->[$r][$c]</td>\n";
+      $table_html .= "$board->[$r][$c]</td>\n";
       
     }
-    print "</tr>\n";
+    $table_html .= "</tr>\n";
   }
-  print "</table>\n";
+  $table_html .= "</table>\n";
+  
+  print $q->p( $table_html );
 }
 
 #-------------------------------------------------------------------------------
@@ -550,6 +547,20 @@ sub set_my_player {
   else {
     $game->{my_player} = 1 - $current_player;
   }
+}
+
+sub end_page {
+  print $q->hr();
+  
+  if ( $action ne 'login_form' ) {
+    navigate_button( 'logout', 'Log out'  );
+  }
+
+  print $q->p( $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/' }, 'Leave feedback' ) );
+
+  hit_counter();
+
+  print $q->end_html();
 }
 
 #-------------------------------------------------------------------------------
