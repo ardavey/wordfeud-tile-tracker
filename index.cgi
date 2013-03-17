@@ -224,7 +224,7 @@ sub show_game {
   navigate_button( 'game_list', 'Game list'  );
 
   print $q->hr();
-  print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
+  print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.')<br/> vs '
                  . ${$game->{players}}[1 - $me]->{username}.' ('.${$game->{players}}[1 - $me]->{score}.')' );
   
   #print $q->pre( Dumper($game) );
@@ -433,25 +433,19 @@ sub game_row {
     -value => 'View',
   );
   
-  my $colour = undef;
+  my $class = '';
   
   if ( ${$game->{players}}[$me]->{score} > ${$game->{players}}[1 - $me]->{score} ) {
-    $colour = '#bfb';
+    $class = 'winning';
   }
   elsif ( ${$game->{players}}[$me]->{score} < ${$game->{players}}[1 - $me]->{score} ) {
-    $colour = '#fbb';
+    $class = 'losing';
   }
   
-  if ( $colour ) {
-    $game_link .= "<font color='$colour'>";
-  }
-  foreach my $player ( $me, 1 - $me ) {
-    $game_link .= ' '.$game->{players}->[$player]->{username}.' ('.${$game->{players}}[$player]->{score}.') vs ';
-  }
-  $game_link =~ s/ vs $//;
-  if ( $colour ) {
-    $game_link .= '</font>';
-  }
+  $game_link .= "<span class='$class'>";
+  $game_link .= ' ' . $game->{players}->[$me]->{username} . ' vs ' . $game->{players}->[1 - $me]->{username}
+             .  ' (' . ${$game->{players}}[$me]->{score} . ' - ' . ${$game->{players}}[1 - $me]->{score} . ')';  
+  $game_link .= '</span>';
 
   $game_link .= $q->end_form();
   

@@ -7,6 +7,14 @@ body {
   background-color: #222;
 }
 
+span.winning {
+ color: #bfb; 
+}
+
+span.losing {
+ color: #fbb;   
+}
+
 table.board {
   border: 0.1em solid black;
   border-collapse: collapse;
