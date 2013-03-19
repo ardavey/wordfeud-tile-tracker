@@ -53,13 +53,14 @@ end_page();
 sub login_form {
   start_page();
   
+  $log->info( 'login_form: loading page' );
+  
   my %cookies = CGI::Cookie->fetch();
   if ( $cookies{sessionID} ) {
     print $q->p( 'Restoring previous session' );
+    $log->info( 'login_form: Found cookie - restoring session' );
     redirect( 'game_list' );
   }
-
-  $log->info( 'login_form' );
   
   print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->hr();
@@ -356,7 +357,7 @@ sub check_cookie {
 sub redirect {
   my ( $action ) = @_;
   
-  $log->info( "redirect: $action" );
+  $log->info( "redirect: Redirecting to $action" );
   
   $q->delete_all();
   print $q->start_form(
