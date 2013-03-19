@@ -10,7 +10,7 @@
 use strict;
 use lib qw( /home/ardavey/perlmods );
 
-use CGI::Pretty qw( -nosticky );
+use CGI qw( -nosticky );
 use CGI::Cookie;
 
 use Data::Dumper;
@@ -59,8 +59,7 @@ sub login_form {
     redirect( 'game_list' );
   }
 
-  Log::Log4perl::MDC->put('session', 'no session' );
-  $log->info( 'Login form' );
+  $log->info( 'login_form' );
   
   print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->hr();
@@ -121,11 +120,13 @@ sub do_login {
       -expires => '+1d',
     );
     start_page( $cookie );
+    $log->info( 'User '.$q->param( 'email' ).' logged in' );
     print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
     redirect( 'game_list' );
   }
   else {
     start_page();
+    $log->warn( 'User '.$q->param( 'email' ).' failed to log in' );
     print $q->p( 'Failed to log in!' );
     redirect( 'login_page' );
   }
@@ -143,6 +144,7 @@ sub game_list {
   my @running_their_turn = ();
   my @complete = ();
   
+  $log->info( 'game_list: found details for ' . scalar @$games . ' games' );
   foreach my $game ( @$games ) {
     set_my_player( $game );
     if ( $game->{is_running} ) {
@@ -210,14 +212,19 @@ sub show_game {
 
   my $id = $q->param( 'id' );
   my $game = $wf->get_game( $id );
+  
+
   set_my_player( $game );
   my $me = $game->{my_player};
+
+  $log->info( "show_game: ID $id (" . ${$game->{players}}[$me]->{username}
+              . ' vs ' . ${$game->{players}}[1 - $me]->{username} . ')' );
 
   navigate_button( 'game_list', 'Game list'  );
   
   print $q->hr();
-  print $q->h3( ${$game->{players}}[$me]->{username}.' ('.${$game->{players}}[$me]->{score}.') vs '
-                 . ${$game->{players}}[1 - $me]->{username}.' ('.${$game->{players}}[1 - $me]->{score}.')' );
+  print $q->h3( ${$game->{players}}[$me]->{username} . ' (' . ${$game->{players}}[$me]->{score} . ') vs '
+                 . ${$game->{players}}[1 - $me]->{username} . ' (' . ${$game->{players}}[1 - $me]->{score} . ')' );
   
   #print $q->pre( Dumper($game) );
 
@@ -300,8 +307,9 @@ sub logout {
     -expires => '-1d',
   );
   start_page( $cookie );
+  $log->info( 'logout' );
+  print $q->p( 'Logging out...' );  
   $wf->log_out();
-  print $q->p( 'Logging out...' );
   redirect( 'login_form' );
 }
 
@@ -311,7 +319,6 @@ sub start_page {
   my ( $cookie ) = @_;
   
   my %headers = (
-#    '-type' => 'application/xhtml+xml',
     '-charset' => 'utf-8',
   );
   
@@ -348,6 +355,8 @@ sub check_cookie {
 
 sub redirect {
   my ( $action ) = @_;
+  
+  $log->info( "redirect: $action" );
   
   $q->delete_all();
   print $q->start_form(
