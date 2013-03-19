@@ -1,11 +1,32 @@
 html {
   font-family: sans-serif;
   font-size: 10pt;
-  color: #fff;
+  color: #f6edd6;
 }
 
 body {
   background-color: #222;
+}
+
+h2 {
+  color: #f3f1ce;
+}
+
+h3 {
+  color: #e99223;
+}
+
+h4 {
+  color: #6e99ff;
+  text-decoration: underline;
+  padding-bottom: 0;
+}
+
+h5 {
+  color: #6e99ff;
+  font-size: smaller;
+  text-decoration: none;
+  padding: 0;
 }
 
 hr {

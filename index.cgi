@@ -161,9 +161,9 @@ sub game_list {
   navigate_button( 'game_list', 'Reload game list'  );
 
   print $q->hr();
-  print $q->h3( 'Running Games:' );
+  print $q->h2( 'Running Games:' );
 
-  print $q->h4( 'Your Turn:' );
+  print $q->h3( 'Your Turn:' );
   print $q->start_ul();
   if ( scalar @running_your_turn ) {
     foreach my $game ( @running_your_turn ) {
@@ -175,7 +175,7 @@ sub game_list {
   }
   print $q->end_ul();
   
-  print $q->h4( 'Their Turn:' );
+  print $q->h3( 'Their Turn:' );
   print $q->start_ul();
   if ( scalar @running_their_turn ) {
     foreach my $game ( @running_their_turn ) {
@@ -188,7 +188,7 @@ sub game_list {
   print "</ul>\n</li>";
   print $q->end_ul();
   
-  print $q->h3( 'Recently Completed Games:' );
+  print $q->h2( 'Recently Completed Games:' );
   
   print $q->start_ul();
   if ( scalar @complete ) {
@@ -279,8 +279,8 @@ sub show_game {
     }
   }
   
-  print_tiles( \@rack, '<u>Your rack:</u>' );
-  print_tiles( \@remaining, '<u>Their rack:</u>' );
+  print_tiles( \@rack, $q->h4( 'Your rack:' ) );
+  print_tiles( \@remaining, $q->h4( 'Their rack:' ) );
   
   print_board( \@board );
   
@@ -460,7 +460,7 @@ sub print_tiles {
   # If there are more than 7 tiles, we know that we're displaying the bag/opponent's rack combo so tailor the label accordingly
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
-    $label = "<u>Remaining tiles ($tile_count):</u><br/><small><i>Bag: $bag_count; Their rack: 7</i></small>";
+    $label = $q->h4( "Remaining tiles ($tile_count)" ).$q->h5( "Bag: $bag_count; Their rack: 7</span>" );
   }
   
   print $q->p( $label );
@@ -509,7 +509,7 @@ sub print_board {
     [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
   );
   
-  print $q->p( '<u>Board:</u>' );
+  print $q->h4( 'Board:' );
   
   my $table_html = "<table class='board'>\n";
   foreach my $r ( 0..14 ) {
