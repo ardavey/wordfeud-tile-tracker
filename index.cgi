@@ -567,7 +567,7 @@ sub end_page {
     navigate_button( 'logout', 'Log out'  );
   }
 
-  print $q->p( $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/' }, 'Leave feedback' ) );
+  print $q->p( $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/#respond' }, 'Leave feedback' ) );
 
   hit_counter();
 

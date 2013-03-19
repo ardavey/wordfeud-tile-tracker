@@ -8,6 +8,22 @@ body {
   background-color: #222;
 }
 
+a:link {
+  color: #0098ff;
+}
+
+a:visited {
+  color: #0098ff;
+}
+
+a:hover {
+  color: #00fff0;
+}
+
+a:active {
+  color: #ffb41d;
+}
+
 h2 {
   color: #f3f1ce;
 }
