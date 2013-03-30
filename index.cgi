@@ -557,7 +557,7 @@ sub print_chat {
     my $usr = $game->{player_names}->{$msg->{sender}};
     my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
     my $txt = $msg->{message};
-    push( @chat, "[$time GMT] <u>$usr</u>: $txt");
+    push( @chat, "[$time UTC] <u>$usr</u>: $txt");
   }
   if ( scalar @chat ) {
     print $q->h4( 'Chat messages:' );    
