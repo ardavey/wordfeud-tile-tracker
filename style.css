@@ -61,6 +61,14 @@ span.losing {
  color: #fbb;   
 }
 
+p.chat {
+  border: 0.1em dashed #6e99ff;
+  background: #CCD;
+  color: #223;
+  padding: 0.5em 1em 0.5em 1em;
+  float: left;
+}
+
 table.board {
   border: 0.1em solid black;
   border-collapse: collapse;

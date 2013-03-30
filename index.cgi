@@ -12,6 +12,7 @@ use lib qw( /home/ardavey/perlmods );
 
 use CGI qw( -nosticky );
 use CGI::Cookie;
+use DateTime;
 
 use Data::Dumper;
 
@@ -112,7 +113,13 @@ sub login_form {
 # This way, we avoid sending a new login request every time the game list page is refreshed
 
 sub do_login {
-  my $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
+  my $session_id;
+  if ( $q->param( "session" ) ) {
+    $session_id = $q->param( "session" );
+  }
+  else {
+    $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
+  }
   if ( $session_id ) {
     $wf->set_session_id( $session_id );
     my $cookie = CGI::Cookie->new(
@@ -121,7 +128,7 @@ sub do_login {
       -expires => '+1d',
     );
     start_page( $cookie );
-    $log->info( 'User '.$q->param( 'email' ).' logged in' );
+    $log->info( 'User '.$q->param( 'email' ).' logged in; session '.$wf->get_session_id() );
     print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
     redirect( 'game_list' );
   }
@@ -214,8 +221,8 @@ sub show_game {
   my $id = $q->param( 'id' );
   my $game = $wf->get_game( $id );
   
-
   set_my_player( $game );
+  set_player_names( $game );
   my $me = $game->{my_player};
 
   $log->info( "show_game: ID $id (" . ${$game->{players}}[$me]->{username}
@@ -227,7 +234,7 @@ sub show_game {
   print $q->h3( ${$game->{players}}[$me]->{username} . ' (' . ${$game->{players}}[$me]->{score} . ') vs '
                  . ${$game->{players}}[1 - $me]->{username} . ' (' . ${$game->{players}}[1 - $me]->{score} . ')' );
   
-  #print $q->pre( Dumper($game) );
+  #$log->warn( Dumper($game) );
 
   my @board = ();
   my @rack = ();
@@ -288,13 +295,9 @@ sub show_game {
   }
   
   print_tiles( \@rack, $q->h4( 'Your rack:' ) );
-  print_tiles( \@remaining, $q->h4( 'Their rack:' ) );
-  
+  print_tiles( \@remaining, $q->h4( 'Their rack:' ) );  
   print_board( \@board );
-  
-  #print $q->hr();
-  #my @chat = $wf->get_chat_messages( $id );
-  #print "<pre>".Dumper( \@chat )."</pre>";
+  print_chat( $game );
 }
 
 #-------------------------------------------------------------------------------
@@ -348,6 +351,7 @@ sub check_cookie {
     redirect( 'login_form' );
   }
   $wf->set_session_id( $cookies{sessionID}->{value}->[0] );
+  $log->info( "Restoring session ".$wf->get_session_id() );
   start_page( $cookies{sessionID} );
 }
 
@@ -358,7 +362,7 @@ sub redirect {
   my ( $action ) = @_;
   
   $log->info( "redirect: Redirecting to $action" );
-  
+
   $q->delete_all();
   print $q->start_form(
     -name => 'redirect_form',
@@ -545,6 +549,23 @@ sub print_board {
   print $q->p( $table_html );
 }
 
+sub print_chat {
+  my ( $game ) = @_;
+  my @raw_chat = $wf->get_chat_messages( $game->{id} );
+  my @chat = ();
+  foreach my $msg ( @{$raw_chat[0]} ) {
+    my $usr = $game->{player_names}->{$msg->{sender}};
+    my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
+    my $txt = $msg->{message};
+    push( @chat, "[$time GMT] <u>$usr</u>: $txt");
+  }
+  if ( scalar @chat ) {
+    print $q->h4( 'Chat messages:' );    
+    print "<p class='chat'>\n" . join( "<br />\n", @chat ) . '</p>';
+  }
+  
+}
+
 #-------------------------------------------------------------------------------
 # Utility method to set the ID of "you" - used for ordering names on game list
 # so that the logged in player is always shown first
@@ -557,6 +578,13 @@ sub set_my_player {
   }
   else {
     $game->{my_player} = 1 - $current_player;
+  }
+}
+
+sub set_player_names {
+  my ( $game ) = @_;
+  foreach my $player ( @{  $game->{players} } ) {
+    $game->{player_names}->{$player->{id}} = $player->{username};
   }
 }
 
