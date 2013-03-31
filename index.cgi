@@ -9,6 +9,7 @@
 
 use strict;
 use lib qw( /home/ardavey/perlmods );
+use utf8;
 
 use CGI qw( -nosticky );
 use CGI::Cookie;
@@ -231,8 +232,44 @@ sub show_game {
   navigate_button( 'game_list', 'Game list'  );
   
   print $q->hr();
-  print $q->h3( ${$game->{players}}[$me]->{username} . ' (' . ${$game->{players}}[$me]->{score} . ') vs '
-                 . ${$game->{players}}[1 - $me]->{username} . ' (' . ${$game->{players}}[1 - $me]->{score} . ')' );
+  print $q->h3(
+      '<a href="'
+    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 'full' )
+    . '"><img class="av" src="'
+    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 40 )
+    . '" /></a> '
+    . ${$game->{players}}[$me]->{username}
+    . ' ('
+    . ${$game->{players}}[$me]->{score}
+    . ') vs <a href="'
+    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 'full' )
+    . '"><img class="av" src="'
+    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 40 )
+    . '" /></a> '
+    . ${$game->{players}}[1 - $me]->{username}
+    . ' ('
+    . ${$game->{players}}[1 - $me]->{score}
+    . ')'
+  );
+  
+  $q->delete_all();
+  print $q->start_form(
+      -name => $id,
+      -method => 'POST',
+      -action => '/',
+    ),
+    $q->hidden(
+      -name => 'action',
+      -value => 'show_game',
+    ),  
+    $q->hidden(
+      -name => 'id',
+      -value => $id,
+    ),
+    $q->submit(
+      -name => 'submit_form',
+      -value => 'Reload game state',
+    );
   
   #$log->warn( Dumper($game) );
 
@@ -556,7 +593,7 @@ sub print_chat {
   foreach my $msg ( @{$raw_chat[0]} ) {
     my $usr = $game->{player_names}->{$msg->{sender}};
     my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
-    my $txt = $msg->{message};
+    my $txt = utf8::encode( $msg->{message} );
     push( @chat, "[$time UTC] <u>$usr</u>: $txt");
   }
   if ( scalar @chat ) {
@@ -581,9 +618,12 @@ sub set_my_player {
   }
 }
 
+#-------------------------------------------------------------------------------
+# Map user IDs to names
+
 sub set_player_names {
   my ( $game ) = @_;
-  foreach my $player ( @{  $game->{players} } ) {
+  foreach my $player ( @{ $game->{players} } ) {
     $game->{player_names}->{$player->{id}} = $player->{username};
   }
 }

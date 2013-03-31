@@ -61,6 +61,13 @@ span.losing {
  color: #fbb;   
 }
 
+img.av {
+  vertical-align: middle;
+  padding-left: 0.8em;
+  padding-right: 0.2em;
+  border: none;
+}
+
 p.chat {
   border: 0.1em dashed #6e99ff;
   background: #CCD;
