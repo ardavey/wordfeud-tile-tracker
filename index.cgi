@@ -9,7 +9,6 @@
 
 use strict;
 use lib qw( /home/ardavey/perlmods );
-use utf8;
 
 use CGI qw( -nosticky );
 use CGI::Cookie;
@@ -593,7 +592,8 @@ sub print_chat {
   foreach my $msg ( @{$raw_chat[0]} ) {
     my $usr = $game->{player_names}->{$msg->{sender}};
     my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
-    my $txt = utf8::encode( $msg->{message} );
+    my $txt = $msg->{message};
+    utf8::encode( $txt );
     push( @chat, "[$time UTC] <u>$usr</u>: $txt");
   }
   if ( scalar @chat ) {
