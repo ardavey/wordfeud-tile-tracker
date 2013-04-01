@@ -198,7 +198,7 @@ sub game_list {
   print "</ul>\n</li>";
   print $q->end_ul();
   
-  print $q->h2( 'Recently Completed Games:' );
+  print $q->h2( 'Finished Games:' );
   
   print $q->start_ul();
   if ( scalar @complete ) {
@@ -231,25 +231,6 @@ sub show_game {
   navigate_button( 'game_list', 'Game list'  );
   
   print $q->hr();
-  print $q->h3(
-      '<a href="'
-    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 'full' )
-    . '"><img class="av" src="'
-    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 40 )
-    . '" /></a> '
-    . ${$game->{players}}[$me]->{username}
-    . ' ('
-    . ${$game->{players}}[$me]->{score}
-    . ') vs <a href="'
-    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 'full' )
-    . '"><img class="av" src="'
-    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 40 )
-    . '" /></a> '
-    . ${$game->{players}}[1 - $me]->{username}
-    . ' ('
-    . ${$game->{players}}[1 - $me]->{score}
-    . ')'
-  );
   
   $q->delete_all();
   print $q->start_form(
@@ -269,6 +250,26 @@ sub show_game {
       -name => 'submit_form',
       -value => 'Reload game state',
     );
+  
+  print $q->h3(
+      '<a href="'
+    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 'full' )
+    . '"><img class="av" src="'
+    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 40 )
+    . '" /></a> '
+    . ${$game->{players}}[$me]->{username}
+    . ' ('
+    . ${$game->{players}}[$me]->{score}
+    . ')<br /><a href="'
+    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 'full' )
+    . '"><img class="av" src="'
+    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 40 )
+    . '" /></a> '
+    . ${$game->{players}}[1 - $me]->{username}
+    . ' ('
+    . ${$game->{players}}[1 - $me]->{score}
+    . ')'
+  );
   
   #$log->warn( Dumper($game) );
 

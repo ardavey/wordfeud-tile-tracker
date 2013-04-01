@@ -25,21 +25,21 @@ a:active {
 }
 
 h2 {
-  color: #f3f1ce;
+  color: #e3a85b;
 }
 
 h3 {
-  color: #e99223;
+  color: #91acf7;
 }
 
 h4 {
-  color: #6e99ff;
+  color: #9fdd92;
   text-decoration: underline;
   padding-bottom: 0;
 }
 
 h5 {
-  color: #6e99ff;
+  color: #89be7d;
   font-size: smaller;
   text-decoration: none;
   padding: 0;
@@ -69,8 +69,10 @@ img.av {
   width: 40px;
   height: 40px;
   vertical-align: middle;
-  padding-left: 0.8em;
-  padding-right: 0.2em;
+  padding-left: 0.4em;
+  padding-right: 0.4em;
+  padding-top: 0.2em;
+  padding-bottom: 0.2em
   border: none;
 }
 
