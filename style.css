@@ -53,6 +53,10 @@ hr {
   background-color: gray;
 }
 
+small {
+  color: #555;
+}
+
 span.winning {
  color: #bfb; 
 }
@@ -62,6 +66,8 @@ span.losing {
 }
 
 img.av {
+  width: 40px;
+  height: 40px;
   vertical-align: middle;
   padding-left: 0.8em;
   padding-right: 0.2em;

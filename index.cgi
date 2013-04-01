@@ -12,7 +12,8 @@ use lib qw( /home/ardavey/perlmods );
 
 use CGI qw( -nosticky );
 use CGI::Cookie;
-use DateTime;
+use DateTime qw( from_epoch );
+use Time::HiRes qw( gettimeofday tv_interval );
 
 use Data::Dumper;
 
@@ -21,6 +22,7 @@ use Wordfeud;
 my $q = new CGI;
 my $wf = new Wordfeud;
 my $log = $wf->get_log();
+my $t0;
 
 my $action = $q->param( "action" ) || 'login_form';
 
@@ -66,8 +68,8 @@ sub login_form {
   print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->hr();
   print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow you to view the remaining tiles on any of your current Wordfeud games.' );
-  print $q->p( 'The site is under active development, and will change and evolve with no notice.  I plan to get all of the functionality in place before I "pretty it up" - function over form!' );
-  print $q->p( 'Please enter your Wordfeud credentials.  These are only used to talk to the game server, and are NOT stored anywhere.' );
+  print $q->p( 'The site is under active development, and will change and evolve with no notice.' );
+  print $q->p( 'Please enter your Wordfeud credentials to load your games.  These details are only used to talk to the game server - they are not stored by ardavey.com.' );
   
   $q->delete_all();
   print $q->start_form(
@@ -101,11 +103,9 @@ sub login_form {
   );
   print $q->end_form;
 
-  print $q->p(
-    'I will try my best not to break the site so that you can continue to use it, but it is of course presented without any guarantees.',
-    'If you visit the site at some time and the colours/layout look weird, try a full refresh (Shift-Refresh or Ctrl-Refresh, depending on your browser) to reload the stylesheet.',
-    'Please report any issues or request features using the feedback link below.'
-  );
+  print $q->p( 'I will try my best not to break the site so that you can continue to use it, but it is of course presented without any guarantees.' );
+  print $q->p( 'If you visit the site at some time and the colours/layout look weird, try a full refresh (Shift-Refresh or Ctrl-Refresh, depending on your browser) to reload the stylesheet.' );
+  print $q->p( 'Finally, please report any issues or request features using the feedback link below. Development of this site is driven equally by things I want to do and things the community would like!' );
 }
 
 #-------------------------------------------------------------------------------
@@ -357,6 +357,8 @@ sub logout {
 # Very basic start of page stuff
 sub start_page {
   my ( $cookie ) = @_;
+  
+  $t0 = [ gettimeofday() ];
   
   my %headers = (
     '-charset' => 'utf-8',
@@ -639,6 +641,7 @@ sub end_page {
 
   hit_counter();
 
+  print $q->p( $q->small( 'Page generated in ' . tv_interval( $t0 ) . ' seconds.' ) );
   print $q->end_html();
 }
 
@@ -659,7 +662,7 @@ sub hit_counter {
     $hits = 0;
   }
   
-  print $q->small( '&#169; ardavey 2013<br/>' . ++$hits . ' page views' );
+  print $q->p( $q->small( '&#169; ardavey 2013<br/>' . ++$hits . ' page views' ) );
   
   # attempt to write the new hitcounter value to file
   open HITWRITE, "> wf_hits";
