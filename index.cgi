@@ -592,7 +592,7 @@ sub print_chat {
   my @raw_chat = $wf->get_chat_messages( $game->{id} );
   my @chat = ();
   foreach my $msg ( @{$raw_chat[0]} ) {
-    my $usr = $game->{player_info}->{$msg->{sender}};
+    my $usr = $game->{player_info}->{$msg->{sender}}->{username};
     my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
     $time =~ s/(\d)T(\d)/$1 $2/;
     my $txt = $msg->{message};
@@ -630,9 +630,9 @@ sub set_my_player {
 sub set_player_info {
   my ( $game ) = @_;
   foreach my $player ( @{ $game->{players} } ) {
-    $game->{player_info}->{$player->{id}} = $player->{username};
+    $game->{player_info}->{$player->{id}}->{username} = $player->{username};
     if ( exists $player->{fb_user_id} ) {
-      $game->{player_info}->{$player->{id}} = $player->{fb_user_id};
+      $game->{player_info}->{$player->{id}}->{fb_id} = $player->{fb_user_id};
     }
   }
 }
