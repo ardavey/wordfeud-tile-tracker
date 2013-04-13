@@ -29,7 +29,7 @@ h2 {
 }
 
 h3 {
-  color: #91acf7;
+  color: #b4c6f7;
 }
 
 h4 {
@@ -54,7 +54,7 @@ hr {
 }
 
 small {
-  color: #555;
+  color: #666;
 }
 
 span.winning {
@@ -79,7 +79,7 @@ img.av {
 p.chat {
   border: 0.1em dashed #6e99ff;
   background: #CCD;
-  color: #223;
+  color: #112;
   padding: 0.5em 1em 0.5em 1em;
   display: inline-block;
 }

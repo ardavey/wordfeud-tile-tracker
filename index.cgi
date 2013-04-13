@@ -222,7 +222,7 @@ sub show_game {
   my $game = $wf->get_game( $id );
   
   set_my_player( $game );
-  set_player_names( $game );
+  set_player_info( $game );
   my $me = $game->{my_player};
 
   $log->info( "show_game: ID $id (" . ${$game->{players}}[$me]->{username}
@@ -271,7 +271,7 @@ sub show_game {
     . ')'
   );
   
-  #$log->warn( Dumper($game) );
+  # $log->warn( Dumper($game) );
 
   my @board = ();
   my @rack = ();
@@ -287,7 +287,7 @@ sub show_game {
   # deduct those which are visible on the logged in player's rack and the board
   my $avail = {};
   
-  foreach my $letter ( split( //, $wf->get_distribution() ) ) {
+  foreach my $letter ( @{ $wf->get_distribution( $game ) } ) {
     if ( $avail->{$letter} ) {
       $avail->{$letter}++;
     }
@@ -593,17 +593,21 @@ sub print_chat {
   my @raw_chat = $wf->get_chat_messages( $game->{id} );
   my @chat = ();
   foreach my $msg ( @{$raw_chat[0]} ) {
-    my $usr = $game->{player_names}->{$msg->{sender}};
+    my $usr = $game->{player_info}->{$msg->{sender}};
     my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
+    $time =~ s/(\d)T(\d)/$1 $2/;
     my $txt = $msg->{message};
-    utf8::encode( $txt );
-    push( @chat, "[$time UTC] <u>$usr</u>: $txt");
+    utf8::encode( $txt );  # prevent wide-character warnings when emoticons are present
+    push( @chat, "[$time] <u>$usr</u>: $txt");
   }
+  print $q->h4( 'Chat messages:' );
   if ( scalar @chat ) {
-    print $q->h4( 'Chat messages:' );    
-    print "<p class='chat'>\n" . join( "<br />\n", @chat ) . '</p>';
+    print $q->p( { -class => 'chat' }, join( "<br />\n", @chat ) );
   }
-  
+  else {
+    print $q->p( { -class => 'chat' }, 'No messages' );
+  }
+  print $q->p( $q->small( 'Timestamps are in UTC' ) );
 }
 
 #-------------------------------------------------------------------------------
@@ -624,18 +628,24 @@ sub set_my_player {
 #-------------------------------------------------------------------------------
 # Map user IDs to names
 
-sub set_player_names {
+sub set_player_info {
   my ( $game ) = @_;
   foreach my $player ( @{ $game->{players} } ) {
-    $game->{player_names}->{$player->{id}} = $player->{username};
+    $game->{player_info}->{$player->{id}} = $player->{username};
+    if ( exists $player->{fb_user_id} ) {
+      $game->{player_info}->{$player->{id}} = $player->{fb_user_id};
+    }
   }
 }
+
+#-------------------------------------------------------------------------------
+# Add the footer and wrap up our HTML
 
 sub end_page {
   print $q->hr();
   
   if ( $action ne 'login_form' ) {
-    navigate_button( 'logout', 'Log out'  );
+    navigate_button( 'logout', 'Log out' );
   }
 
   print $q->p( $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/#respond' }, 'Leave feedback' ) );
