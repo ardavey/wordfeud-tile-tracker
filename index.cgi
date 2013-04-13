@@ -128,7 +128,7 @@ sub do_login {
       -expires => '+1d',
     );
     start_page( $cookie );
-    $log->info( 'User '.$q->param( 'email' ).' logged in; session '.$wf->get_session_id() );
+    $log->info( 'User '.$q->param( 'email' ).' logged in' );
     print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
     redirect( 'game_list' );
   }
@@ -390,7 +390,6 @@ sub check_cookie {
     redirect( 'login_form' );
   }
   $wf->set_session_id( $cookies{sessionID}->{value}->[0] );
-  $log->info( "Restoring session ".$wf->get_session_id() );
   start_page( $cookies{sessionID} );
 }
 
