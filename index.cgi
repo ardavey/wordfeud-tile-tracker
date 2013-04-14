@@ -10,6 +10,8 @@
 use strict;
 use lib qw( /home/ardavey/perlmods );
 
+use utf8;
+
 use CGI qw( -nosticky );
 use CGI::Cookie;
 use DateTime qw( from_epoch );
@@ -275,7 +277,8 @@ sub show_game {
     . ')'
   );
   
-  # $log->warn( Dumper($game) );
+  # Only uncomment this for debugging...
+  #$log->warn( Dumper($game) );
 
   my @board = ();
   my @rack = ();
@@ -335,6 +338,8 @@ sub show_game {
     }
   }
   
+  print $q->p( 'Language: '.$wf->{language} );
+
   print_tiles( \@rack, $q->h4( 'Your rack:' ) );
   print_tiles( \@remaining, $q->h4( 'Their rack:' ) );  
   print_board( \@board );
@@ -526,6 +531,7 @@ sub print_tiles {
     print "<table><tr>\n";
     while ( my $tile = shift @$tiles ) {
       $count++;
+      utf8::encode( $tile );
       print "<td class='rack'>$tile</td>\n";
       if ( $count % 10 == 0 ) {
         print "</tr>\n<tr>\n";
@@ -572,8 +578,12 @@ sub print_board {
     $table_html .= "<tr>\n";
     my @row = map { $_ ||= ' ' } @{$board->[$r]};
     foreach my $c ( 0..14 ) {
+      my $tile = $board->[$r][$c];
+      my $square = $board_map[$r][$c];
+      utf8::encode( $tile );
+      
       if ( $row[$c] eq ' ' ) {
-        $table_html .= "<td class='$board_map[$r][$c]'>";
+        $table_html .= "<td class='$square'>";
       }
       elsif ( $row[$c] ne lc( $row[$c] ) ) {
         $table_html .= "<td class='tile'>";
@@ -581,7 +591,7 @@ sub print_board {
       else {
         $table_html .= "<td class='tile blank'>";
       }
-      $table_html .= "$board->[$r][$c]</td>\n";
+      $table_html .= "$tile</td>\n";
       
     }
     $table_html .= "</tr>\n";
