@@ -147,6 +147,10 @@ sub game_list {
   check_cookie();
   
   my $games = $wf->get_games();
+  unless ( $games ) {
+    print $q->p( 'Invalid session - please log in again' );
+    redirect( 'logout' );
+  }
   
   my @running_your_turn = ();
   my @running_their_turn = ();
