@@ -257,25 +257,8 @@ sub show_game {
       -value => 'Reload game state',
     );
   
-  print $q->h3(
-      '<a href="'
-    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 'full' )
-    . '"><img class="av" src="'
-    . $wf->get_avatar_url( ${$game->{players}}[$me]->{id}, 40 )
-    . '" /></a> '
-    . ${$game->{players}}[$me]->{username}
-    . ' ('
-    . ${$game->{players}}[$me]->{score}
-    . ')<br /><a href="'
-    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 'full' )
-    . '"><img class="av" src="'
-    . $wf->get_avatar_url( ${$game->{players}}[1 - $me]->{id}, 40 )
-    . '" /></a> '
-    . ${$game->{players}}[1 - $me]->{username}
-    . ' ('
-    . ${$game->{players}}[1 - $me]->{score}
-    . ')'
-  );
+  print_player_header( $game, $me );
+  print_player_header( $game, 1 - $me );
   
   # Only uncomment this for debugging...
   #$log->warn( Dumper($game) );
@@ -342,7 +325,7 @@ sub show_game {
 
   print_tiles( \@rack, $q->h4( 'Your rack:' ) );
   print_tiles( \@remaining, $q->h4( 'Their rack:' ) );  
-  print_board( \@board );
+  print_board( $game, \@board );
   print_chat( $game );
 }
 
@@ -545,10 +528,27 @@ sub print_tiles {
 }
 
 #-------------------------------------------------------------------------------
+# Print the player avatar, name and score for the top of the show_game page
+
+sub print_player_header {
+  my ( $game, $player ) = @_;
+  
+  my $html = '';
+  $html .= '<a href="'. $wf->get_avatar_url( ${$game->{players}}[$player]->{id}, 'full' ) . '">';
+  $html .= '<img class="av" src="' . $wf->get_avatar_url( ${$game->{players}}[$player]->{id}, 40 ) . '" /></a> ';
+  $html .= ${$game->{players}}[$player]->{username} . ' (' . ${$game->{players}}[$player]->{score} . ')';
+  if ( $game->{current_player} == $player ) {
+    $html .= ' *';
+  }
+  
+  print $q->h3( $html );
+}
+
+#-------------------------------------------------------------------------------
 # Hacky generation of HTML to show the pretty coloured board, and played tiles
 
 sub print_board {
-  my ( $board ) = @_;
+  my ( $game, $board ) = @_;
 
   # This 2D array represents the style to be applied to the respective squares on the board.
   # This is pretty ugly and evil, but it's amazing what you can come up with in a spare half
@@ -599,7 +599,15 @@ sub print_board {
   $table_html .= "</table>\n";
   
   print $q->p( $table_html );
+  
+  if ( exists $game->{last_move} && $game->{last_move}->{move_type} eq 'move' ) {
+    print $q->p( 'Last move: ' . $game->{last_move}->{main_word} . ' (' . $game->{last_move}->{points} . ')' );
+  }
 }
+
+
+#-------------------------------------------------------------------------------
+# Print out any chat messages exchanged in the current game
 
 sub print_chat {
   my ( $game ) = @_;
