@@ -183,7 +183,7 @@ sub game_list {
   print $q->start_ul();
   if ( scalar @running_your_turn ) {
     foreach my $game ( @running_your_turn ) {
-      print $q->li( game_row( $game ) );
+      print_game_link( $game );
     }
   }
   else {
@@ -195,7 +195,7 @@ sub game_list {
   print $q->start_ul();
   if ( scalar @running_their_turn ) {
     foreach my $game ( @running_their_turn ) {
-      print $q->li( game_row( $game ) );
+      print_game_link( $game );
     }
   }
   else {
@@ -209,7 +209,7 @@ sub game_list {
   print $q->start_ul();
   if ( scalar @complete ) {
     foreach my $game ( @complete ) {
-      print $q->li( game_row( $game ) );
+      print_game_link( $game );
     }
   }
   else {
@@ -325,7 +325,8 @@ sub show_game {
 
   print_tiles( \@rack, $q->h4( 'Your rack:' ) );
   print_tiles( \@remaining, $q->h4( 'Their rack:' ) );  
-  print_board( $game, \@board );
+  print_board( \@board );
+  print_last_move( $game );
   print_chat( $game );
 }
 
@@ -447,7 +448,7 @@ sub navigate_button {
 #-------------------------------------------------------------------------------
 # Returns the HTML to show a game on the game list page
 
-sub game_row {
+sub print_game_link {
   my ( $game ) = @_;
   
   my $id = $game->{id};
@@ -491,7 +492,7 @@ sub game_row {
 
   $game_link .= $q->end_form();
   
-  return $game_link;
+  print $q->li( $game_link );
 }
 
 #-------------------------------------------------------------------------------
@@ -548,7 +549,7 @@ sub print_player_header {
 # Hacky generation of HTML to show the pretty coloured board, and played tiles
 
 sub print_board {
-  my ( $game, $board ) = @_;
+  my ( $board ) = @_;
 
   # This 2D array represents the style to be applied to the respective squares on the board.
   # This is pretty ugly and evil, but it's amazing what you can come up with in a spare half
@@ -599,12 +600,44 @@ sub print_board {
   $table_html .= "</table>\n";
   
   print $q->p( $table_html );
-  
-  if ( exists $game->{last_move} && $game->{last_move}->{move_type} eq 'move' ) {
-    print $q->p( 'Last move: ' . $game->{last_move}->{main_word} . ' (' . $game->{last_move}->{points} . ')' );
-  }
 }
 
+#-------------------------------------------------------------------------------
+# Print details of the last move played
+
+sub print_last_move {
+  my ( $game ) = @_;
+  
+  my $out = '';
+
+  if ( exists $game->{last_move} ) {
+    my $id = $game->{last_move}->{user_id};
+    my $player = $game->{player_info}->{$id}->{username};
+    $out .= 'Last move: ';
+    if ( $game->{last_move}->{move_type} eq 'move' ) {
+      my $points = $game->{last_move}->{points};
+      $out .= "$player played " . $game->{last_move}->{main_word};
+      $out .= " for $points point";
+      $out .= ( $points > 1 ) ? 's' : '';
+    }
+    elsif ( $game->{last_move}->{move_type} eq 'swap' ) {
+      my $count = $game->{last_move}->{tile_count};
+      $out .= "<i>$player swapped $count tile";
+      $out .= ( $count > 1 ) ? 's' : '';
+      $out .= '</i>';
+    }
+    elsif ( $game->{last_move}->{move_type} eq 'pass' ) {
+      $out .= "<i>$player passed</i>";
+    }
+    elsif ( $game->{last_move}->{move_type} eq 'resign' ) {
+      $out .= "<i>$player resigned</i>";
+    }
+    else {
+      return;
+    }
+    print $q->p( $out );
+  }
+}
 
 #-------------------------------------------------------------------------------
 # Print out any chat messages exchanged in the current game
