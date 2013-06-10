@@ -503,19 +503,24 @@ sub print_game_link {
 
 sub print_tiles {
   my ( $tiles, $label ) = @_;
+  my $trailer;
+  
   my $tile_count = scalar @$tiles;
   
-  # If there are more than 7 tiles, we know that we're displaying the bag/opponent's rack combo so tailor the label accordingly
+  # If there are more than 7 tiles, we know that we're displaying the bag/opponent's
+  # rack combo so tailor the label accordingly
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
-    $label = $q->h4( "Remaining tiles:" ) . $q->h5( "Bag: $bag_count; Their rack: 7</span>" );
+    $label = $q->h4( "Remaining tiles:" );
+    $trailer = $q->h5( "(Bag: $bag_count; Their rack: 7)" );
   }
   else {
     my $points = 0;
     foreach my $tile ( @$tiles ) {
       $points += $wf->{dist}->{points}->{$tile};
     }
-    $label = $q->h4( $label ) . $q->h5( "($points points)" );
+    $label = $q->h4( $label );
+    $trailer = $q->h5( "($points points)" );
   }
   
   print $q->p( $label );
@@ -526,12 +531,17 @@ sub print_tiles {
     while ( my $tile = shift @$tiles ) {
       $count++;
       utf8::encode( $tile );
-      print "<td class='rack'>$tile</td>\n";
+      print "<td class='rack'>$tile";
+      if ( $tile ne '?' ) {
+        print "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
+      }
+      print "</td>\n";
       if ( $count % 10 == 0 ) {
         print "</tr>\n<tr>\n";
       }
     }
     print "</tr></table>\n";
+    print "$trailer\n";
   }
   else {
     print $q->p( '<i>Empty</i>' );
@@ -602,8 +612,12 @@ sub print_board {
       else {
         $table_html .= "<td class='tile blank'>";
       }
-      $table_html .= "$tile</td>\n";
+      $table_html .= uc( $tile );
       
+      if ( uc( $row[$c] ) eq $row[$c] ) {
+        $table_html .= "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
+      }      
+      $table_html .= "</td>\n";
     }
     $table_html .= "</tr>\n";
   }

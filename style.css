@@ -57,6 +57,10 @@ small {
   color: #666;
 }
 
+sub.score, sup.score {
+  color: #F77 !important;
+}
+
 span.winning {
  color: #bfb; 
 }
@@ -85,18 +89,14 @@ table.board {
   border: 0.1em solid black;
   border-collapse: collapse;
   padding: 0;
-  font-family: monospace;
   color: #000;
 }
 
 td.rack {
   border: 0.1em solid #cca;
-  width: 1.5em;
-  height: 1.5em;
   background-color: #ffd;
   text-align: center;
   vertical-align: middle;
-  font-family: monospace;
   color: #000;
   border-radius: 5px !important;
 }
@@ -104,8 +104,10 @@ td.rack {
 td {
   border: 0.1em solid #333;  
   padding: 0;
-  width: 1.5em;
-  height: 1.5em;
+  width: 1.8em;
+  height: 1.8em;
+  font-family: serif;
+  font-weight: bold;
 }
 
 td.tile {
