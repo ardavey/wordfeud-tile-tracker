@@ -273,11 +273,13 @@ sub show_game {
     $board[$r] = [qw( 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 )];
   }
   
+  $wf->set_distribution( $game );
+
   # Build a hash to track the available tiles. Start with all of them, and then
   # deduct those which are visible on the logged in player's rack and the board
   my $avail = {};
   
-  foreach my $letter ( @{ $wf->get_distribution( $game ) } ) {
+  foreach my $letter ( @{$wf->{dist}->{tileset}} ) {
     if ( $avail->{$letter} ) {
       $avail->{$letter}++;
     }
@@ -321,10 +323,10 @@ sub show_game {
     }
   }
   
-  print $q->p( 'Language: '.$wf->{language} );
+  print $q->p( 'Language: '.$wf->{dist}->{name} );
 
-  print_tiles( \@rack, $q->h4( 'Your rack:' ) );
-  print_tiles( \@remaining, $q->h4( 'Their rack:' ) );  
+  print_tiles( \@rack, 'Your rack:' );
+  print_tiles( \@remaining, 'Their rack:' );  
   print_board( \@board );
   print_last_move( $game );
   print_chat( $game );
@@ -349,6 +351,7 @@ sub logout {
 
 #-------------------------------------------------------------------------------
 # Very basic start of page stuff
+
 sub start_page {
   my ( $cookie ) = @_;
   
@@ -446,7 +449,7 @@ sub navigate_button {
 }
 
 #-------------------------------------------------------------------------------
-# Returns the HTML to show a game on the game list page
+# Prints the HTML to show a game on the game list page
 
 sub print_game_link {
   my ( $game ) = @_;
@@ -505,7 +508,14 @@ sub print_tiles {
   # If there are more than 7 tiles, we know that we're displaying the bag/opponent's rack combo so tailor the label accordingly
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
-    $label = $q->h4( "Remaining tiles ($tile_count)" ).$q->h5( "Bag: $bag_count; Their rack: 7</span>" );
+    $label = $q->h4( "Remaining tiles:" ) . $q->h5( "Bag: $bag_count; Their rack: 7</span>" );
+  }
+  else {
+    my $points = 0;
+    foreach my $tile ( @$tiles ) {
+      $points += $wf->{dist}->{points}->{$tile};
+    }
+    $label = $q->h4( $label ) . $q->h5( "($points points)" );
   }
   
   print $q->p( $label );
@@ -652,7 +662,7 @@ sub print_chat {
     $time =~ s/(\d)T(\d)/$1 $2/;
     my $txt = $msg->{message};
     utf8::encode( $txt );  # prevent wide-character warnings when emoticons are present
-    push( @chat, "[$time] <u>$usr</u>: $txt");
+    push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
   }
   print $q->h4( 'Chat messages:' );
   if ( scalar @chat ) {
