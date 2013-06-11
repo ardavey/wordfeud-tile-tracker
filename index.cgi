@@ -612,11 +612,12 @@ sub print_board {
       else {
         $table_html .= "<td class='tile blank'>";
       }
-      $table_html .= uc( $tile );
+      #$table_html .= $tile;
       
-      if ( uc( $row[$c] ) eq $row[$c] ) {
-        $table_html .= "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
-      }      
+      $table_html .= uc( $tile );
+      #if ( uc( $row[$c] ) eq $row[$c] ) {
+      #  $table_html .= "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
+      #}      
       $table_html .= "</td>\n";
     }
     $table_html .= "</tr>\n";

@@ -58,7 +58,8 @@ small {
 }
 
 sub.score, sup.score {
-  color: #F77 !important;
+  color: #333 !important;
+  font-size: 6pt !important;
 }
 
 span.winning {
@@ -106,7 +107,7 @@ td {
   padding: 0;
   width: 1.8em;
   height: 1.8em;
-  font-family: serif;
+  font-family: sans-serif;
   font-weight: bold;
 }
 
