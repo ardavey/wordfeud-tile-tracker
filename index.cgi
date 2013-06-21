@@ -323,7 +323,7 @@ sub show_game {
     }
   }
   
-  print $q->p( 'Language: '.$wf->{dist}->{name} );
+  print $q->h5( 'Language: '.$wf->{dist}->{name} );
 
   print_tiles( \@rack, 'Your rack:' );
   print_tiles( \@remaining, 'Their rack:' );  
@@ -512,7 +512,7 @@ sub print_tiles {
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
     $label = $q->h4( "Remaining tiles:" );
-    $trailer = $q->h5( "(Bag: $bag_count; Their rack: 7)" );
+    $trailer = $q->h5( "Bag: $bag_count; Their rack: 7" );
   }
   else {
     my $points = 0;
@@ -530,8 +530,9 @@ sub print_tiles {
     print "<table><tr>\n";
     while ( my $tile = shift @$tiles ) {
       $count++;
-      utf8::encode( $tile );
-      print "<td class='rack'>$tile";
+      my $print_tile = $tile;
+      utf8::encode( $print_tile );
+      print "<td class='rack'>$print_tile";
       if ( $tile ne '?' ) {
         print "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
       }
@@ -562,7 +563,7 @@ sub print_player_header {
     $html .= ' *';
   }
   
-  print $q->h3( $html );
+  print $q->h2( $html );
 }
 
 #-------------------------------------------------------------------------------
@@ -601,7 +602,8 @@ sub print_board {
     foreach my $c ( 0..14 ) {
       my $tile = $board->[$r][$c];
       my $square = $board_map[$r][$c];
-      utf8::encode( $tile );
+      my $print_tile = $tile;
+      utf8::encode( $print_tile );
       
       if ( $row[$c] eq ' ' ) {
         $table_html .= "<td class='$square'>";
@@ -612,12 +614,11 @@ sub print_board {
       else {
         $table_html .= "<td class='tile blank'>";
       }
-      #$table_html .= $tile;
       
-      $table_html .= uc( $tile );
-      #if ( uc( $row[$c] ) eq $row[$c] ) {
-      #  $table_html .= "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
-      #}      
+      $table_html .= uc( $print_tile );
+      $table_html .= "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
+
+
       $table_html .= "</td>\n";
     }
     $table_html .= "</tr>\n";
@@ -660,7 +661,7 @@ sub print_last_move {
     else {
       return;
     }
-    print $q->p( $out );
+    print $q->h5( $out );
   }
 }
 
