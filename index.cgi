@@ -327,7 +327,7 @@ sub show_game {
 
   print_tiles( \@rack, 'Your rack:' );
   print_tiles( \@remaining, 'Their rack:' );  
-  print_board( \@board );
+  print_board( \@board, $game->{board} );
   print_last_move( $game );
   print_chat( $game );
 }
@@ -456,6 +456,7 @@ sub print_game_link {
   
   my $id = $game->{id};
   my $me = $game->{my_player};
+  my $dist = $wf->set_distribution( $game );
   
   $q->delete_all();
   my $game_link = $q->start_form(
@@ -487,10 +488,13 @@ sub print_game_link {
   elsif ( ${$game->{players}}[$me]->{score} < ${$game->{players}}[1 - $me]->{score} ) {
     $class = 'losing';
   }
-  
+
   $game_link .= "<span class='$class'>";
   $game_link .= ' ' . $game->{players}->[$me]->{username} . ' vs ' . $game->{players}->[1 - $me]->{username}
              .  ' (' . ${$game->{players}}[$me]->{score} . ' - ' . ${$game->{players}}[1 - $me]->{score} . ')';  
+  $game_link .= '<br />';
+  $game_link .= $q->small( $wf->{dist}->{name} );
+  $game_link .= $q->small( ( $game->{board} == 0 ) ? ' - Standard board' : ' - Random board' );
   $game_link .= '</span>';
 
   $game_link .= $q->end_form();
@@ -570,7 +574,7 @@ sub print_player_header {
 # Hacky generation of HTML to show the pretty coloured board, and played tiles
 
 sub print_board {
-  my ( $board ) = @_;
+  my ( $board, $layout ) = @_;
 
   # This 2D array represents the style to be applied to the respective squares on the board.
   # This is pretty ugly and evil, but it's amazing what you can come up with in a spare half
@@ -601,7 +605,11 @@ sub print_board {
     my @row = map { $_ ||= ' ' } @{$board->[$r]};
     foreach my $c ( 0..14 ) {
       my $tile = $board->[$r][$c];
-      my $square = $board_map[$r][$c];
+      my $square = '';
+      if ( $layout == 0 ) {
+        $square = $board_map[$r][$c];
+      }
+      
       my $print_tile = $tile;
       utf8::encode( $print_tile );
       
@@ -616,9 +624,10 @@ sub print_board {
       }
       
       $table_html .= uc( $print_tile );
-      $table_html .= "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
-
-
+      if ( $tile ne ' ' && $tile eq uc( $tile ) ) {
+        $table_html .= "<sub class='score'>".$wf->{dist}->{points}->{"$tile"}."</sub>";
+      }
+      
       $table_html .= "</td>\n";
     }
     $table_html .= "</tr>\n";
