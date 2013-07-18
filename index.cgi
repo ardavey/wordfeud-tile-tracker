@@ -609,6 +609,9 @@ sub print_board {
       if ( $layout == 0 ) {
         $square = $board_map[$r][$c];
       }
+      else {
+        $square = 'e';
+      }
       
       my $print_tile = $tile;
       utf8::encode( $print_tile );
