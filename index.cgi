@@ -45,7 +45,7 @@ my %dispatch = (
 end_page();
 
 #-------------------------------------------------------------------------------
-# In the even that we don't receive a valid action, boot them to the login screen
+# If we didn't receive a valid action, boot the user to the login screen
 sub fallback {
   start_page();
   print $q->p( 'Invalid action - returning to login page' );
