@@ -9,22 +9,27 @@
 
 use strict;
 use lib qw( /home/ardavey/perlmods );
-
 use utf8;
 
+use Wordfeud;
 use CGI qw( -nosticky );
 use CGI::Cookie;
 use DateTime qw( from_epoch );
 use Time::HiRes qw( gettimeofday tv_interval );
+use DBI;
 
+use Log::Log4perl qw( get_logger );
 use Data::Dumper;
 
-use Wordfeud;
+Log::Log4perl->init( '/home/ardavey/log4perl/wf.conf' );
+Log::Log4perl::MDC->put('session', 'NOSESSION' );
+$Log::Log4perl::DateFormat::GMTIME = 1;
 
 my $q = new CGI;
 my $wf = new Wordfeud;
-my $log = $wf->get_log();
-my $t0;
+
+$wf->{log} = get_logger();
+$wf->{log}->debug( 'Connecting to DB' );
 
 my $action = $q->param( "action" ) || 'login_form';
 
@@ -54,16 +59,15 @@ end_page();
 #-------------------------------------------------------------------------------
 # Display the login form or, if the sessionID cookie is found, attempt to restore
 # the previous session
-
 sub login_form {
   start_page();
-  
-  $log->info( 'login_form: loading page' );
+
+  $wf->{log}->info( 'login_form: loading page' );
   
   my %cookies = CGI::Cookie->fetch();
   if ( $cookies{sessionID} ) {
     print $q->p( 'Restoring previous session' );
-    $log->info( 'login_form: Found cookie - restoring session' );
+    $wf->{log}->info( 'login_form: Found cookie - restoring session' );
     redirect( 'game_list' );
   }
   
@@ -113,7 +117,6 @@ sub login_form {
 #-------------------------------------------------------------------------------
 # Actually submit the login request, then redirect to the game list if successful.
 # This way, we avoid sending a new login request every time the game list page is refreshed
-
 sub do_login {
   my $session_id;
   if ( $q->param( "session" ) ) {
@@ -122,21 +125,24 @@ sub do_login {
   else {
     $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
   }
+  $wf->{log}->debug( Dumper( $wf->{res}->{_content} ) );
+
   if ( $session_id ) {
-    $wf->set_session_id( $session_id );
+    set_session_id( $session_id );
     my $cookie = CGI::Cookie->new(
       -name => 'sessionID',
       -value => $wf->get_session_id(),
       -expires => '+1d',
     );
     start_page( $cookie );
-    $log->info( 'User '.$q->param( 'email' ).' logged in' );
+    $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
     print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
+    #record_user();
     redirect( 'game_list' );
   }
   else {
     start_page();
-    $log->warn( 'User '.$q->param( 'email' ).' failed to log in' );
+    $wf->{log}->warn( 'User '.$q->param( 'email' ).' failed to log in' );
     print $q->p( 'Failed to log in!' );
     redirect( 'login_page' );
   }
@@ -144,7 +150,6 @@ sub do_login {
 
 #-------------------------------------------------------------------------------
 # Display a list of all games which are still registered on the server
-
 sub game_list {
   check_cookie();
   
@@ -154,11 +159,13 @@ sub game_list {
     redirect( 'logout' );
   }
   
+  $wf->{log}->debug( Dumper( $wf->{res}->{_content} ) );
+  
   my @running_your_turn = ();
   my @running_their_turn = ();
   my @complete = ();
   
-  $log->info( 'game_list: found details for ' . scalar @$games . ' games' );
+  $wf->{log}->info( 'game_list: found details for ' . scalar @$games . ' games' );
   foreach my $game ( @$games ) {
     set_my_player( $game );
     if ( $game->{is_running} ) {
@@ -215,23 +222,23 @@ sub game_list {
   else {
     print $q->li( '<i>No games</i>' );
   }
-  print $q->end_ul();
+  print $q->end_ul();  
 }  
 
 #-------------------------------------------------------------------------------
 # Show the details for a specific game
-
 sub show_game {
   check_cookie();
 
   my $id = $q->param( 'id' );
   my $game = $wf->get_game( $id );
+  $wf->{log}->debug( Dumper( $wf->{res}->{_content} ) );
   
   set_my_player( $game );
   set_player_info( $game );
   my $me = $game->{my_player};
 
-  $log->info( "show_game: ID $id (" . ${$game->{players}}[$me]->{username}
+  $wf->{log}->info( "show_game: ID $id (" . ${$game->{players}}[$me]->{username}
               . ' vs ' . ${$game->{players}}[1 - $me]->{username} . ')' );
 
   navigate_button( 'game_list', 'Game list'  );
@@ -260,9 +267,6 @@ sub show_game {
   print_player_header( $game, $me );
   print_player_header( $game, 1 - $me );
   
-  # Only uncomment this for debugging...
-  #$log->warn( Dumper($game) );
-
   my @board = ();
   my @rack = ();
   my @players = ();
@@ -329,13 +333,12 @@ sub show_game {
   print_tiles( \@remaining, 'Their rack:' );  
   print_board( \@board, $game->{board} );
   print_last_move( $game );
-  print_chat( $game );
+  print_chat( $game );  
 }
 
 #-------------------------------------------------------------------------------
 # This just clears the cookie - there's nothing to do server-side.  People like
 # the peace of mind associated with being able to "remove any details" about a site
-
 sub logout {
   my $cookie = CGI::Cookie->new(
     -name => 'sessionID',
@@ -343,7 +346,7 @@ sub logout {
     -expires => '-1d',
   );
   start_page( $cookie );
-  $log->info( 'logout' );
+  $wf->{log}->info( 'logout' );
   print $q->p( 'Logging out...' );  
   $wf->log_out();
   redirect( 'login_form' );
@@ -351,11 +354,11 @@ sub logout {
 
 #-------------------------------------------------------------------------------
 # Very basic start of page stuff
-
 sub start_page {
   my ( $cookie ) = @_;
-  
-  $t0 = [ gettimeofday() ];
+  $wf->{dbh} = DBI->connect( 'dbi:SQLite:dbname=/home/ardavey/db/wordfeudtracker.db', '', '' );
+
+  $wf->{t0} = [ gettimeofday() ];
   
   my %headers = (
     '-charset' => 'utf-8',
@@ -369,7 +372,7 @@ sub start_page {
   $q->default_dtd( '-//WAPFORUM//DTD XHTML Mobile 1.2//EN http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd' );
   print $q->start_html(
     -dtd => 1,
-    -title => 'Wordfeud Tile Information',
+    -title => 'Wordfeud Tile Tracker',
     -style => { 'src' => 'style.css' },
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
   );
@@ -377,7 +380,6 @@ sub start_page {
 
 #-------------------------------------------------------------------------------
 # Checks if we have a valid cookie - if not, we redirect to the login page
-
 sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
   unless ( $cookies{sessionID} ) {
@@ -385,17 +387,18 @@ sub check_cookie {
     print $q->p( 'Returning to login page' );
     redirect( 'login_form' );
   }
-  $wf->set_session_id( $cookies{sessionID}->{value}->[0] );
+  set_session_id( $cookies{sessionID}->{value}->[0] );
+  
   start_page( $cookies{sessionID} );
 }
 
 #-------------------------------------------------------------------------------
 # Really janky auto-redirect HTML page
-
 sub redirect {
   my ( $action ) = @_;
   
-  $log->info( "redirect: Redirecting to $action" );
+  $wf->{log}->info( "redirect: Redirecting to $action" );
+  print $q->p( 'Hit the button below if not automatically redirected.' );
 
   $q->delete_all();
   print $q->start_form(
@@ -422,7 +425,6 @@ sub redirect {
 
 #-------------------------------------------------------------------------------
 # Generate a button for navigating to one of the other pages
-
 sub navigate_button {
   my ( $action, $label ) = @_;
   
@@ -450,7 +452,6 @@ sub navigate_button {
 
 #-------------------------------------------------------------------------------
 # Prints the HTML to show a game on the game list page
-
 sub print_game_link {
   my ( $game ) = @_;
   
@@ -504,7 +505,6 @@ sub print_game_link {
 
 #-------------------------------------------------------------------------------
 # Prints the provided array of letters in rows of 10
-
 sub print_tiles {
   my ( $tiles, $label ) = @_;
   my $trailer;
@@ -555,7 +555,6 @@ sub print_tiles {
 
 #-------------------------------------------------------------------------------
 # Print the player avatar, name and score for the top of the show_game page
-
 sub print_player_header {
   my ( $game, $player ) = @_;
   
@@ -572,7 +571,6 @@ sub print_player_header {
 
 #-------------------------------------------------------------------------------
 # Hacky generation of HTML to show the pretty coloured board, and played tiles
-
 sub print_board {
   my ( $board, $layout ) = @_;
 
@@ -642,7 +640,6 @@ sub print_board {
 
 #-------------------------------------------------------------------------------
 # Print details of the last move played
-
 sub print_last_move {
   my ( $game ) = @_;
   
@@ -679,7 +676,6 @@ sub print_last_move {
 
 #-------------------------------------------------------------------------------
 # Print out any chat messages exchanged in the current game
-
 sub print_chat {
   my ( $game ) = @_;
   my @raw_chat = $wf->get_chat_messages( $game->{id} );
@@ -703,9 +699,16 @@ sub print_chat {
 }
 
 #-------------------------------------------------------------------------------
+# Set the session ID in both the object and the log4perl MDC
+sub set_session_id {
+  my ( $session_id ) = @_;
+  Log::Log4perl::MDC->put('session', $session_id );
+  $wf->set_session_id( $session_id );
+}
+
+#-------------------------------------------------------------------------------
 # Utility method to set the ID of "you" - used for ordering names on game list
 # so that the logged in player is always shown first
-
 sub set_my_player {
   my ( $game ) = @_;
   my $current_player = $game->{current_player};
@@ -719,7 +722,6 @@ sub set_my_player {
 
 #-------------------------------------------------------------------------------
 # Map user IDs to names
-
 sub set_player_info {
   my ( $game ) = @_;
   foreach my $player ( @{ $game->{players} } ) {
@@ -732,7 +734,6 @@ sub set_player_info {
 
 #-------------------------------------------------------------------------------
 # Add the footer and wrap up our HTML
-
 sub end_page {
   print $q->hr();
   
@@ -744,13 +745,17 @@ sub end_page {
 
   hit_counter();
 
-  print $q->p( $q->small( 'Page generated in ' . tv_interval( $t0 ) . ' seconds.' ) );
+  print $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
   print $q->end_html();
+  
+  if ( $wf->{dbh} ) {
+    $wf->{log}->debug( 'Disconnecting from DB' );
+    $wf->{dbh}->disconnect();
+  }
 }
 
 #-------------------------------------------------------------------------------
 # Very simple hit counter - I want to see if anyone else is using this!
-
 sub hit_counter {  
   my $hits;
   
@@ -771,4 +776,24 @@ sub hit_counter {
   open HITWRITE, "> wf_hits";
   print HITWRITE $hits;
   close HITWRITE;
+}
+
+#-------------------------------------------------------------------------------
+# Does what it says on the tin...
+sub connect_to_db {
+  # SQLite will do for now - the site's relatively low volume
+  my $dsn = 'dbi:SQLite:dbname=/home/ardavey/db/wordfeudtracker.db';
+  my $user = '';
+  my $pass = '';
+  $wf->{dbh} = DBI->connect( $dsn, $user, $pass );
+}
+
+
+sub get_db_game {
+  
+}
+
+
+sub write_db_game {
+  
 }
