@@ -494,8 +494,17 @@ sub print_game_link {
   $game_link .= ' ' . $game->{players}->[$me]->{username} . ' vs ' . $game->{players}->[1 - $me]->{username}
              .  ' (' . ${$game->{players}}[$me]->{score} . ' - ' . ${$game->{players}}[1 - $me]->{score} . ')';  
   $game_link .= '<br />';
-  $game_link .= $q->small( $wf->{dist}->{name} );
-  $game_link .= $q->small( ( $game->{board} == 0 ) ? ' - Standard board' : ' - Random board' );
+  
+  my $started = DateTime->from_epoch( epoch => $game->{created}, time_zone => "UTC" );
+  my $updated = DateTime->from_epoch( epoch => $game->{updated}, time_zone => "UTC" );
+  $started =~ s/(\d)T(\d)/$1 $2/;
+  $updated =~ s/(\d)T(\d)/$1 $2/;
+  
+  $game_link .= $q->small(
+                          $wf->{dist}->{name},
+                          ( $game->{board} == 0 ) ? ' &mdash; Standard board' : ' &mdash; Random board',
+                          "<br/>Started: $started &mdash; Last Move: $updated"
+                          );
   $game_link .= '</span>';
 
   $game_link .= $q->end_form();
@@ -559,8 +568,8 @@ sub print_player_header {
   my ( $game, $player ) = @_;
   
   my $html = '';
-  $html .= '<a href="'. $wf->get_avatar_url( ${$game->{players}}[$player]->{id}, 'full' ) . '">';
-  $html .= '<img class="av" src="' . $wf->get_avatar_url( ${$game->{players}}[$player]->{id}, 40 ) . '" /></a> ';
+  $html .= '<a href="'. get_avatar_url( ${$game->{players}}[$player]->{id}, 'full' ) . '">';
+  $html .= '<img class="av" src="' . get_avatar_url( ${$game->{players}}[$player]->{id}, 40 ) . '" /></a> ';
   $html .= ${$game->{players}}[$player]->{username} . ' (' . ${$game->{players}}[$player]->{score} . ')';
   if ( $game->{current_player} == $player ) {
     $html .= ' *';
@@ -685,7 +694,7 @@ sub print_chat {
     my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
     $time =~ s/(\d)T(\d)/$1 $2/;
     my $txt = $msg->{message};
-    utf8::encode( $txt );  # prevent wide-character warnings when emoticons are present
+    utf8::encode( $txt );  # should prevent wide-character warnings when emoticons are present
     push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
   }
   print $q->h4( 'Chat messages:' );
@@ -695,7 +704,6 @@ sub print_chat {
   else {
     print $q->p( { -class => 'chat' }, 'No messages' );
   }
-  print $q->p( $q->small( 'Timestamps are in UTC' ) );
 }
 
 #-------------------------------------------------------------------------------
@@ -733,6 +741,14 @@ sub set_player_info {
 }
 
 #-------------------------------------------------------------------------------
+# Returns the URL for the supplied user's avatar
+sub get_avatar_url {
+  my ( $id, $size ) = @_;
+  # Sizes '40', '60' and 'full' are known to work
+  return "http://avatars.wordfeud.com/$size/$id";
+}
+
+#-------------------------------------------------------------------------------
 # Add the footer and wrap up our HTML
 sub end_page {
   print $q->hr();
@@ -746,6 +762,7 @@ sub end_page {
   hit_counter();
 
   print $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
+  print $q->p( $q->small( 'Timestamps are presented in UTC.  The site is provided free of charge as a proof of concept with no guarantees.' ) );
   print $q->end_html();
   
   if ( $wf->{dbh} ) {
