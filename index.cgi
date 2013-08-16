@@ -29,32 +29,28 @@ my $q = new CGI;
 my $wf = new Wordfeud;
 
 $wf->{log} = get_logger();
-$wf->{log}->debug( 'Connecting to DB' );
 
 my $action = $q->param( "action" ) || 'login_form';
 
-if ( $action eq 'login_form' ) {
-  login_form();
-}
-elsif ( $action eq 'do_login' ) {
-  do_login();
-}
-elsif ( $action eq 'game_list' ) {
-  game_list();
-}
-elsif ( $action eq 'show_game' ) {
-  show_game();
-}
-elsif ( $action eq 'logout' ) {
-  logout();
-}
-else {
+my %dispatch = (
+  'login_form' => \&login_form,
+  'do_login'   => \&do_login,
+  'game_list'  => \&game_list,
+  'show_game'  => \&show_game,
+  'logout'     => \&logout,
+);
+
+( $dispatch{ $action } || \&fallback )->();
+
+end_page();
+
+#-------------------------------------------------------------------------------
+# In the even that we don't receive a valid action, boot them to the login screen
+sub fallback {
   start_page();
   print $q->p( 'Invalid action - returning to login page' );
   redirect( 'login_form' );
 }
-
-end_page();
 
 #-------------------------------------------------------------------------------
 # Display the login form or, if the sessionID cookie is found, attempt to restore
@@ -353,9 +349,10 @@ sub logout {
 }
 
 #-------------------------------------------------------------------------------
-# Very basic start of page stuff
+# Very basic start of page stuff.  Connect to DB if appropoiate.
 sub start_page {
   my ( $cookie ) = @_;
+  
   $wf->{dbh} = DBI->connect( 'dbi:SQLite:dbname=/home/ardavey/db/wordfeudtracker.db', '', '' );
 
   $wf->{t0} = [ gettimeofday() ];
@@ -572,7 +569,7 @@ sub print_player_header {
   $html .= '<img class="av" src="' . get_avatar_url( ${$game->{players}}[$player]->{id}, 40 ) . '" /></a> ';
   $html .= ${$game->{players}}[$player]->{username} . ' (' . ${$game->{players}}[$player]->{score} . ')';
   if ( $game->{current_player} == $player ) {
-    $html .= ' *';
+    $html .= ' &larr;';
   }
   
   print $q->h2( $html );
@@ -762,7 +759,7 @@ sub end_page {
   hit_counter();
 
   print $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
-  print $q->p( $q->small( 'Timestamps are presented in UTC.  The site is provided free of charge as a proof of concept with no guarantees.' ) );
+  print $q->p( $q->small( 'Timestamps are presented in UTC.<br/>The site is provided free of charge as a proof of concept with no guarantees.' ) );
   print $q->end_html();
   
   if ( $wf->{dbh} ) {
@@ -798,6 +795,7 @@ sub hit_counter {
 #-------------------------------------------------------------------------------
 # Does what it says on the tin...
 sub connect_to_db {
+  $wf->{log}->debug( 'Connecting to DB' );
   # SQLite will do for now - the site's relatively low volume
   my $dsn = 'dbi:SQLite:dbname=/home/ardavey/db/wordfeudtracker.db';
   my $user = '';
