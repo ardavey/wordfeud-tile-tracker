@@ -69,9 +69,11 @@ sub login_form {
   
   print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->hr();
-  print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow you to view the remaining tiles on any of your current Wordfeud games.' );
+  print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow',
+               'you to view the remaining tiles on any of your current Wordfeud games.' );
   print $q->p( 'The site is under active development, and will change and evolve with no notice.' );
-  print $q->p( 'Please enter your Wordfeud credentials to load your games.  These details are only used to talk to the game server - they are not stored by ardavey.com.' );
+  print $q->p( 'Please enter your Wordfeud credentials to load your games.  These details',
+               'are only used to talk to the game server - they are not stored by ardavey.com.' );
   
   $q->delete_all();
   print $q->start_form(
@@ -105,23 +107,23 @@ sub login_form {
   );
   print $q->end_form;
 
-  print $q->p( 'I will try my best not to break the site so that you can continue to use it, but it is of course presented without any guarantees.' );
-  print $q->p( 'If you visit the site at some time and the colours/layout look weird, try a full refresh (Shift-Refresh or Ctrl-Refresh, depending on your browser) to reload the stylesheet.' );
-  print $q->p( 'Finally, please report any issues or request features using the feedback link below. Development of this site is driven equally by things I want to do and things the community would like!' );
+  print $q->p( 'I will try my best not to break the site so that you can continue to',
+               'use it, but it is of course presented without any guarantees.' );
+  print $q->p( 'If you visit the site at some time and the colours/layout look weird,',
+               'try a full refresh (Shift-Refresh or Ctrl-Refresh, depending on your',
+               'browser) to reload the stylesheet.' );
+  print $q->p( 'Finally, please report any issues or request features using the feedback',
+               'link below. Development of this site is driven equally by things I want',
+               'to do and things the community would like!' );
 }
 
 #-------------------------------------------------------------------------------
 # Actually submit the login request, then redirect to the game list if successful.
 # This way, we avoid sending a new login request every time the game list page is refreshed
 sub do_login {
-  my $session_id;
-  if ( $q->param( "session" ) ) {
-    $session_id = $q->param( "session" );
-  }
-  else {
-    $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
-  }
-  $wf->{log}->debug( Dumper( $wf->{res}->{_content} ) );
+  my $session_id = $wf->login_by_email( $q->param( 'email' ), $q->param( 'password' ) );
+  
+  $wf->{log}->debug( "login_by_email response:" . Dumper( $wf->{res} ) );
 
   if ( $session_id ) {
     set_session_id( $session_id );
@@ -133,7 +135,7 @@ sub do_login {
     start_page( $cookie );
     $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
     print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
-    #record_user();
+    db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
     redirect( 'game_list' );
   }
   else {
@@ -155,7 +157,7 @@ sub game_list {
     redirect( 'logout' );
   }
   
-  $wf->{log}->debug( Dumper( $wf->{res}->{_content} ) );
+  $wf->{log}->debug( "get_games response:" . Dumper( $wf->{res} ) );
   
   my @running_your_turn = ();
   my @running_their_turn = ();
@@ -228,7 +230,7 @@ sub show_game {
 
   my $id = $q->param( 'id' );
   my $game = $wf->get_game( $id );
-  $wf->{log}->debug( Dumper( $wf->{res}->{_content} ) );
+  $wf->{log}->debug( "get_game response:" . Dumper( $wf->{res} ) );
   
   set_my_player( $game );
   set_player_info( $game );
@@ -241,24 +243,7 @@ sub show_game {
   
   print $q->hr();
   
-  $q->delete_all();
-  print $q->start_form(
-      -name => $id,
-      -method => 'POST',
-      -action => '/',
-    ),
-    $q->hidden(
-      -name => 'action',
-      -value => 'show_game',
-    ),  
-    $q->hidden(
-      -name => 'id',
-      -value => $id,
-    ),
-    $q->submit(
-      -name => 'submit_form',
-      -value => 'Reload game state',
-    );
+  navigate_button( 'show_game', 'Reload game', { id => $id } );
   
   print_player_header( $game, $me );
   print_player_header( $game, 1 - $me );
@@ -353,7 +338,7 @@ sub logout {
 sub start_page {
   my ( $cookie ) = @_;
   
-  $wf->{dbh} = DBI->connect( 'dbi:SQLite:dbname=/home/ardavey/db/wordfeudtracker.db', '', '' );
+  db_connect();
 
   $wf->{t0} = [ gettimeofday() ];
   
@@ -423,28 +408,35 @@ sub redirect {
 #-------------------------------------------------------------------------------
 # Generate a button for navigating to one of the other pages
 sub navigate_button {
-  my ( $action, $label ) = @_;
+  my ( $action, $label, $fields ) = @_;
   
   $q->delete_all();
-  print $q->p(
-    $q->start_form(
-      -name => 'navigate_button',
-      -method => 'POST',
-      -action => '/',
-    ),
-  
-    $q->hidden(
-      -name => 'action',
-      -default => $action,
-    ),
-    
-    $q->submit(
-      -name => 'submit_form',
-      -value => $label,
-    ),
-    
-    $q->end_form(),
+  print "<p>\n";
+  print $q->start_form(
+    -name => 'navigate_button',
+    -method => 'POST',
+    -action => '/',
   );
+  
+  print $q->hidden(
+    -name => 'action',
+    -default => $action,
+  );
+  
+  foreach my $field ( keys %$fields ) {
+    print $q->hidden(
+      -name => $field,
+      -value => $fields->{$field},
+    );
+  }
+
+  print $q->submit(
+    -name => 'submit_form',
+    -value => $label,
+  );
+    
+  print $q->end_form();
+  print "</p>\n";
 }
 
 #-------------------------------------------------------------------------------
@@ -763,7 +755,7 @@ sub end_page {
   print $q->end_html();
   
   if ( $wf->{dbh} ) {
-    $wf->{log}->debug( 'Disconnecting from DB' );
+    $wf->{log}->( 'Disconnecting from DB' );
     $wf->{dbh}->disconnect();
   }
 }
@@ -792,23 +784,45 @@ sub hit_counter {
   close HITWRITE;
 }
 
+
+#===============================================================================
+# Database stuff follows...
+#===============================================================================
+
 #-------------------------------------------------------------------------------
 # Does what it says on the tin...
-sub connect_to_db {
+sub db_connect {
   $wf->{log}->debug( 'Connecting to DB' );
   # SQLite will do for now - the site's relatively low volume
   my $dsn = 'dbi:SQLite:dbname=/home/ardavey/db/wordfeudtracker.db';
-  my $user = '';
-  my $pass = '';
-  $wf->{dbh} = DBI->connect( $dsn, $user, $pass );
+  my $user = undef;
+  my $pass = undef;
+  my $opts = {
+    AutoCommit => 1,
+    RaiseError => 1,
+    sqlite_see_if_its_a_number => 1,
+  };
+  $wf->{dbh} = DBI->connect( $dsn, $user, $pass, $opts );
 }
 
 
-sub get_db_game {
+#-------------------------------------------------------------------------------
+# Record the logged in user's ID and username
+sub db_record_user {
+  my ( $id, $username, $email ) = @_;
+  my $last_login = time();
+  my $q = 'replace into users ( id, username, email, last_login ) values ( ?, ?, ?, ? )';
+  $wf->{log}->debug( "Running query: [$q]");
+  my $sth = $wf->{dbh}->prepare( $q );
+  $sth->execute( $id, $username, $email, $last_login );
+}
+
+
+sub db_get_game {
   
 }
 
 
-sub write_db_game {
+sub db_write_game {
   
 }
