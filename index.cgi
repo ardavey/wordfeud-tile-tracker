@@ -322,12 +322,14 @@ sub show_game {
 
   if ( $game->{from_db} ) {
     navigate_button( 'archive_list', 'Archive list', { uid => $game->{players}[$me]->{id}, token => $token } );
+    print $q->hr();    
   }
   else {
     navigate_button( 'game_list', 'Game list', { uid => $game->{players}[$me]->{id} } );
+    print $q->hr();
+    navigate_button( 'show_game', 'Reload game', { gid => $id } );
   }
   
-  print $q->hr();
   
   print_player_header( $game, $me );
   print_player_header( $game, 1 - $me );
