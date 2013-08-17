@@ -444,6 +444,23 @@ sub start_page {
     -style => { 'src' => 'style.css' },
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
   );
+  print <<HTML;
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_GB/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+HTML
+
+  print $q->h1( 'Wordfeud Tile Tracker' );
+
+  print <<HTML;
+<div class="fb-like" data-href="http://www.facebook.com/wordfeudtiletracker" data-width="200" data-colorscheme="dark" data-show-faces="false" data-send="false"></div>
+HTML
+  
 }
 
 #-------------------------------------------------------------------------------
@@ -854,7 +871,10 @@ sub end_page {
     navigate_button( 'logout', 'Log out' );
   }
 
-  print $q->p( $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/#respond' }, 'Leave feedback' ) );
+  print $q->p( 'You can leave feedback via either the',
+               $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/#respond' }, 'blog' ),
+               'or our',
+               $q->a( { href => 'http://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ) );
 
   hit_counter();
 
