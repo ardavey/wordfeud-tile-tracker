@@ -17,6 +17,10 @@ use CGI::Cookie;
 use DateTime qw( from_epoch );
 use Time::HiRes qw( gettimeofday tv_interval );
 use DBI;
+use JSON qw( encode_json decode_json );
+use Compress::Zlib;
+use MIME::Base64;
+use Digest::SHA1 qw( sha1_hex );
 
 use Log::Log4perl qw( get_logger );
 use Data::Dumper;
@@ -33,11 +37,12 @@ $wf->{log} = get_logger();
 my $action = $q->param( "action" ) || 'login_form';
 
 my %dispatch = (
-  'login_form' => \&login_form,
-  'do_login'   => \&do_login,
-  'game_list'  => \&game_list,
-  'show_game'  => \&show_game,
-  'logout'     => \&logout,
+  'login_form'   => \&login_form,
+  'do_login'     => \&do_login,
+  'game_list'    => \&game_list,
+  'archive_list' => \&archive_list,
+  'show_game'    => \&show_game,
+  'logout'       => \&logout,
 );
 
 ( $dispatch{ $action } || \&fallback )->();
@@ -136,7 +141,7 @@ sub do_login {
     $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
     print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
     db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
-    redirect( 'game_list' );
+    redirect( 'game_list', { uid => $wf->{res}->{id} } );
   }
   else {
     start_page();
@@ -151,6 +156,7 @@ sub do_login {
 sub game_list {
   check_cookie();
   
+  my $uid = $q->param( 'uid' );
   my $games = $wf->get_games();
   unless ( $games ) {
     print $q->p( 'Invalid session - please log in again' );
@@ -178,8 +184,8 @@ sub game_list {
       push @complete, $game;
     }
   }
-
-  navigate_button( 'game_list', 'Reload game list'  );
+  
+  navigate_button( 'game_list', 'Reload game list', { uid => $uid } );
 
   print $q->hr();
   print $q->h2( 'Running Games:' );
@@ -209,41 +215,119 @@ sub game_list {
   print "</ul>\n</li>";
   print $q->end_ul();
   
-  print $q->h2( 'Finished Games:' );
+  print $q->h2( 'Completed Games:' );
   
   print $q->start_ul();
   if ( scalar @complete ) {
     foreach my $game ( @complete ) {
       print_game_link( $game );
+      db_write_game( $game );
     }
   }
   else {
     print $q->li( '<i>No games</i>' );
   }
-  print $q->end_ul();  
-}  
+  print $q->end_ul();
+  
+  my @privileged_users = qw(
+    2223733
+  );
+  
+  if ( grep $uid, @privileged_users ) {
+    print $q->h2( 'Archived Games: (EXPERIMENTAL)' );
+    print $q->p( 'This section will show you all old games which have at some time been seen',
+              'in the "Completed Games" section above.<br/>  i.e. it will only show games which the',
+              'site was previously aware of.' );
+    print $q->p( 'In reality, this just means that you need to log into the website',
+                 'at least once between completing a game and that game<br/> being deleted',
+                 'inside the Wordfeud app itself.  Regular users of this website will not even need to',
+                 'give this a second thought!' );
+
+    print "<ul><li>\n";
+    navigate_button( 'archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
+    print "</li></ul>\n";
+  }
+  
+}
+
+#-------------------------------------------------------------------------------
+# Display a list of archived games
+sub archive_list {
+  check_cookie();
+
+  my $uid = $q->param( 'uid' );
+  my $token = $q->param( 'token' );
+  my $games = db_get_games( $uid );
+
+  my @gids = keys %$games;
+  my $sample_game = $games->{$gids[0]}->{clear};
+
+  navigate_button( 'game_list', 'Game list', { uid => $uid } );
+
+  print $q->hr();
+
+  navigate_button( 'archive_list', 'Reload archive', { uid => $uid, token => $token } );
+
+  print $q->h2( 'Archived Games:' );
+  
+  print $q->start_ul();
+  if ( $games && validate_token( $token, $uid, $sample_game ) ) {
+    foreach my $gid ( reverse sort keys %$games ) {
+      print_game_link( $games->{$gid}->{clear}, $games->{$gid}->{raw}, $token );
+    }
+  }
+  else {
+    print $q->li( '<i>No games</i>' );
+  }
+  print $q->end_ul();
+}
+
+#-------------------------------------------------------------------------------
+# Really primitive token system to mitigate against people from reading any old data from the DB
+sub validate_token {
+  my ( $token, $uid, $game ) = @_;
+  
+  my $game_uid = $game->{players}[$game->{my_player}]->{id};
+  my $expected_token = sha1_hex( $uid . $game_uid );
+  if ( $expected_token eq $token ) {
+    return 1;
+  }
+  return 0;
+}
 
 #-------------------------------------------------------------------------------
 # Show the details for a specific game
 sub show_game {
   check_cookie();
 
-  my $id = $q->param( 'id' );
-  my $game = $wf->get_game( $id );
-  $wf->{log}->debug( "get_game response:" . Dumper( $wf->{res} ) );
+  my $id = $q->param( 'gid' );
+  my $raw_game = $q->param( 'raw_game' );
+  my $token = $q->param( 'token' );
+  my $game;
   
-  set_my_player( $game );
-  set_player_info( $game );
+  if ( $raw_game ) {
+    $game = decode_json( uncompress( decode_base64( $raw_game ) ) );
+  }
+  else {
+    $game = $wf->get_game( $id );
+    $wf->{log}->debug( "get_game response:" . Dumper( $wf->{res} ) );
+    set_my_player( $game );
+    set_player_info( $game );
+  }
+  
   my $me = $game->{my_player};
 
-  $wf->{log}->info( "show_game: ID $id (" . ${$game->{players}}[$me]->{username}
+  $wf->{log}->info( "show_game: ID $id (" . $game->{players}[$me]->{username}
               . ' vs ' . ${$game->{players}}[1 - $me]->{username} . ')' );
 
-  navigate_button( 'game_list', 'Game list'  );
+  if ( $game->{from_db} ) {
+    navigate_button( 'archive_list', 'Archive list', { uid => $game->{players}[$me]->{id}, token => $token } );
+  }
+  else {
+    navigate_button( 'game_list', 'Game list', { uid => $game->{players}[$me]->{id} } );
+  }
   
   print $q->hr();
-  
-  navigate_button( 'show_game', 'Reload game', { id => $id } );
   
   print_player_header( $game, $me );
   print_player_header( $game, 1 - $me );
@@ -377,7 +461,7 @@ sub check_cookie {
 #-------------------------------------------------------------------------------
 # Really janky auto-redirect HTML page
 sub redirect {
-  my ( $action ) = @_;
+  my ( $action, $params ) = @_;
   
   $wf->{log}->info( "redirect: Redirecting to $action" );
   print $q->p( 'Hit the button below if not automatically redirected.' );
@@ -393,6 +477,13 @@ sub redirect {
     -name => 'action',
     -default => $action,
   );
+  
+  foreach my $field ( keys %$params ) {
+    print $q->hidden(
+      -name => $field,
+      -value => $params->{$field},
+    );
+  }  
   
   print $q->p(
     $q->submit(
@@ -442,7 +533,7 @@ sub navigate_button {
 #-------------------------------------------------------------------------------
 # Prints the HTML to show a game on the game list page
 sub print_game_link {
-  my ( $game ) = @_;
+  my ( $game, $raw_game, $token ) = @_;
   
   my $id = $game->{id};
   my $me = $game->{my_player};
@@ -461,9 +552,24 @@ sub print_game_link {
   );
   
   $game_link .= $q->hidden(
-    -name => 'id',
+    -name => 'gid',
     -value => $id,
   );
+  
+  if ( $raw_game ) {
+    $game_link .= $q->hidden(
+      -name => 'raw_game',
+      -value => $raw_game,
+    );
+  }
+  
+  if ( $token ) {
+    $game_link .= $q->hidden(
+      -name => 'token',
+      -value => $token,
+    );  
+  }
+  
   
   $game_link .= $q->submit(
     -name => 'submit_form',
@@ -472,16 +578,16 @@ sub print_game_link {
   
   my $class = '';
   
-  if ( ${$game->{players}}[$me]->{score} > ${$game->{players}}[1 - $me]->{score} ) {
+  if ( $game->{players}[$me]->{score} > $game->{players}[1 - $me]->{score} ) {
     $class = 'winning';
   }
-  elsif ( ${$game->{players}}[$me]->{score} < ${$game->{players}}[1 - $me]->{score} ) {
+  elsif ( $game->{players}[$me]->{score} < $game->{players}[1 - $me]->{score} ) {
     $class = 'losing';
   }
 
   $game_link .= "<span class='$class'>";
-  $game_link .= ' ' . $game->{players}->[$me]->{username} . ' vs ' . $game->{players}->[1 - $me]->{username}
-             .  ' (' . ${$game->{players}}[$me]->{score} . ' - ' . ${$game->{players}}[1 - $me]->{score} . ')';  
+  $game_link .= ' ' . $game->{players}[$me]->{username} . ' vs ' . $game->{players}[1 - $me]->{username}
+             .  ' (' . $game->{players}[$me]->{score} . ' - ' . $game->{players}[1 - $me]->{score} . ')';  
   $game_link .= '<br />';
   
   my $started = DateTime->from_epoch( epoch => $game->{created}, time_zone => "UTC" );
@@ -510,7 +616,7 @@ sub print_tiles {
   my $tile_count = scalar @$tiles;
   
   # If there are more than 7 tiles, we know that we're displaying the bag/opponent's
-  # rack combo so tailor the label accordingly
+  # rack combo so override the label accordingly
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
     $label = $q->h4( "Remaining tiles:" );
@@ -709,7 +815,7 @@ sub set_session_id {
 sub set_my_player {
   my ( $game ) = @_;
   my $current_player = $game->{current_player};
-  if ( exists ${$game->{players}}[$current_player]->{rack} ) {
+  if ( exists $game->{players}[$current_player]->{rack} ) {
     $game->{my_player} = $current_player;
   }
   else {
@@ -751,11 +857,11 @@ sub end_page {
   hit_counter();
 
   print $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
-  print $q->p( $q->small( 'Timestamps are presented in UTC.<br/>The site is provided free of charge as a proof of concept with no guarantees.' ) );
+  print $q->p( $q->small( 'Timestamps are presented in UTC.<br/>The site is provided free of charge with no guarantees.' ) );
   print $q->end_html();
   
   if ( $wf->{dbh} ) {
-    $wf->{log}->( 'Disconnecting from DB' );
+    $wf->{log}->debug( 'Disconnecting from DB' );
     $wf->{dbh}->disconnect();
   }
 }
@@ -817,12 +923,56 @@ sub db_record_user {
   $sth->execute( $id, $username, $email, $last_login );
 }
 
-
-sub db_get_game {
+#-------------------------------------------------------------------------------
+# Get all games from the DB for the current user.
+sub db_get_games {
+  my ( $uid ) = @_;
   
+  my $q = 'select id, game_data from games where user_id = ?';
+  my $sth = $wf->{dbh}->prepare( $q );
+  $sth->execute( $uid );
+  
+  my $games = {};
+  while ( my ( $gid, $raw_game ) = $sth->fetchrow_array() ) {
+    $games->{$gid}->{clear} = decode_json( uncompress( decode_base64( $raw_game ) ) );
+    $games->{$gid}->{raw} = $raw_game;
+  }
+  
+  return $games;
 }
 
-
+#-------------------------------------------------------------------------------
+# Record the given game to the DB, compressed and encoded
 sub db_write_game {
+  my ( $game ) = @_;
+  $wf->{log}->debug( 'In db_write_game' );
+  my $user_id = $game->{players}[$game->{my_player}]->{id};
+  my $game_id = $game->{id};
+  my $finished_time = $game->{updated};
   
+  my $q = 'select count(*) from games where id=? and user_id=?';
+  my $sth = $wf->{dbh}->prepare( $q );
+  $sth->execute( $game_id, $user_id );
+  my @res = $sth->fetchrow_array();
+  
+  if ( $res[0] ) {
+    # Game is already in DB for this user
+    $wf->{log}->debug( "Game $game_id already in DB for user $user_id" );
+  }
+  else {
+    $game = $wf->get_game( $game->{id} );
+    
+    # Easier to store this stuff with the game rather than work it out later
+    $game->{from_db} = 1;
+    set_my_player( $game );
+    set_player_info( $game );
+
+    my $game_data = encode_base64( compress( encode_json( $game ) ) );
+    
+    $wf->{log}->info( "Writing game $game_id to DB for user $user_id" );
+    $q = 'insert into games ( id, user_id, finished_time, game_data ) values ( ?, ?, ?, ? )';
+    $sth = $wf->{dbh}->prepare( $q );
+    $wf->{log}->info( "Recording game $game_id to DB for user $user_id" );
+    $sth->execute( $game_id, $user_id, $finished_time, $game_data );
+  }
 }
