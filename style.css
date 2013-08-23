@@ -55,11 +55,12 @@ hr {
 
 li {
   list-style-type: none;
+  margin-left: -2em;
   padding-bottom: 0.5em;
 }
 
 small {
-  color: #666;
+  color: #888;
 }
 
 sub.score, sup.score {

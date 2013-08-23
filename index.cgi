@@ -66,13 +66,12 @@ sub login_form {
   $wf->{log}->info( 'login_form: loading page' );
   
   my %cookies = CGI::Cookie->fetch();
-  if ( $cookies{sessionID} ) {
+  if ( $cookies{sessionID} && $cookies{uid} ) {
     print $q->p( 'Restoring previous session' );
     $wf->{log}->info( 'login_form: Found cookie - restoring session' );
-    redirect( 'game_list' );
+    redirect( 'game_list', { uid => $cookies{uid}->{value} } );
   }
   
-  print $q->h2( 'Wordfeud Tile Tracker' );
   print $q->hr();
   print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow',
                'you to view the remaining tiles on any of your current Wordfeud games.' );
@@ -132,14 +131,21 @@ sub do_login {
 
   if ( $session_id ) {
     set_session_id( $session_id );
-    my $cookie = CGI::Cookie->new(
-      -name => 'sessionID',
-      -value => $wf->get_session_id(),
-      -expires => '+1d',
+    my $cookie_session = CGI::Cookie->new(
+        -name => 'sessionID',
+        -value => $wf->get_session_id(),
+        -expires => '+2d',
     );
-    start_page( $cookie );
+
+    my $cookie_uid = CGI::Cookie->new(
+        -name => 'uid',
+        -value => $wf->{res}->{id},
+        -expires => '+2d',
+    );
+    
+    start_page( [ $cookie_session, $cookie_uid ] );
     $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
-    print $q->p( 'Logged in successfully (session: '.$wf->get_session_id().')' );
+    print $q->p( 'Logged in successfully - loading game list' );
     db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
     redirect( 'game_list', { uid => $wf->{res}->{id} } );
   }
@@ -229,24 +235,20 @@ sub game_list {
   }
   print $q->end_ul();
   
-  my @privileged_users = qw(
-    2223733
-  );
-  
-  if ( grep $uid, @privileged_users ) {
-    print $q->h2( 'Archived Games: (EXPERIMENTAL)' );
-    print $q->p( 'This section will show you all old games which have at some time been seen',
-              'in the "Completed Games" section above.<br/>  i.e. it will only show games which the',
-              'site was previously aware of.' );
-    print $q->p( 'In reality, this just means that you need to log into the website',
-                 'at least once between completing a game and that game<br/> being deleted',
-                 'inside the Wordfeud app itself.  Regular users of this website will not even need to',
-                 'give this a second thought!' );
+  print $q->h2( 'Archived Games: (EXPERIMENTAL)' );
+  print $q->p( 'This section will show you all old games which have at some time been seen',
+               'in the "Completed Games" section above  i.e. it will only show games which the',
+               'site was previously aware of since 17-August-13' );
+  print $q->p( 'This just means that you need to log into the website',
+               'at least once between completing a game and that game being deleted',
+               'inside the Wordfeud app itself.' );
+  print $q->p( 'At present, this is very much an experimental feature - it is vital that you let us know if',
+               'you see any strange or unexpected behaviour.  If logging out and back in does not resolve',
+               'your issues then please take the time to leave a post on our Facebook page with the details.' );
 
-    print "<ul><li>\n";
-    navigate_button( 'archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
-    print "</li></ul>\n";
-  }
+  print "<ul><li>\n";
+  navigate_button( 'archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
+  print "</li></ul>\n";
   
 }
 
@@ -259,8 +261,10 @@ sub archive_list {
   my $token = $q->param( 'token' );
   my $games = db_get_games( $uid );
 
+  $wf->{log}->debug( "Fetched games from DB:" . Dumper( $games ) );
+
   my @gids = keys %$games;
-  my $sample_game = $games->{$gids[0]}->{clear};
+  my $sample_game = $games->{$gids[0]};
 
   navigate_button( 'game_list', 'Game list', { uid => $uid } );
 
@@ -273,7 +277,7 @@ sub archive_list {
   print $q->start_ul();
   if ( $games && validate_token( $token, $uid, $sample_game ) ) {
     foreach my $gid ( reverse sort keys %$games ) {
-      print_game_link( $games->{$gid}->{clear}, $games->{$gid}->{raw}, $token );
+      print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token );
     }
   }
   else {
@@ -422,7 +426,7 @@ sub logout {
 #-------------------------------------------------------------------------------
 # Very basic start of page stuff.  Connect to DB if appropoiate.
 sub start_page {
-  my ( $cookie ) = @_;
+  my ( $cookies ) = @_;
   
   db_connect();
 
@@ -432,8 +436,8 @@ sub start_page {
     '-charset' => 'utf-8',
   );
   
-  if ( $cookie ) {
-    $headers{ '-cookie' } = $cookie;
+  if ( $cookies ) {
+    $headers{ '-cookie' } = $cookies;
   }
   print $q->header( %headers );
   
@@ -456,10 +460,6 @@ sub start_page {
 HTML
 
   print $q->h1( 'Wordfeud Tile Tracker' );
-
-  print <<HTML;
-<div class="fb-like" data-href="http://www.facebook.com/wordfeudtiletracker" data-width="200" data-colorscheme="dark" data-show-faces="false" data-send="false"></div>
-HTML
   
 }
 
@@ -473,8 +473,9 @@ sub check_cookie {
     redirect( 'login_form' );
   }
   set_session_id( $cookies{sessionID}->{value}->[0] );
+  $wf->{uid} = $cookies{uid}->{value}->[0];
   
-  start_page( $cookies{sessionID} );
+  start_page( [ $cookies{sessionID}, $cookies{uid} ] );
 }
 
 #-------------------------------------------------------------------------------
@@ -557,6 +558,8 @@ sub print_game_link {
   my $id = $game->{id};
   my $me = $game->{my_player};
   my $dist = $wf->set_distribution( $game );
+  
+  $wf->{log}->debug( "print game link response:" . Dumper( $game ) );
   
   $q->delete_all();
   my $game_link = $q->start_form(
@@ -867,14 +870,19 @@ sub get_avatar_url {
 sub end_page {
   print $q->hr();
   
+  # Facebook Like button
+  print <<HTML;
+<div class="fb-like" data-href="https://www.facebook.com/wordfeudtiletracker" data-width="350" data-colorscheme="dark" data-show-faces="false"></div>
+HTML
+
   if ( $action ne 'login_form' ) {
     navigate_button( 'logout', 'Log out' );
   }
 
-  print $q->p( 'You can leave feedback via either the',
-               $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/#respond' }, 'blog' ),
-               'or our',
-               $q->a( { href => 'http://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ) );
+  print $q->p( 'You can leave feedback/comments/suggestions via the',
+               $q->a( { href => 'http://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ),
+               "or, if you don't have a Facebook account, the",
+               $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/#respond' }, 'blog' ) );
 
   hit_counter();
 
@@ -956,7 +964,7 @@ sub db_get_games {
   
   my $games = {};
   while ( my ( $gid, $raw_game ) = $sth->fetchrow_array() ) {
-    $games->{$gid}->{clear} = decode_json( uncompress( decode_base64( $raw_game ) ) );
+    $games->{$gid} = decode_json( uncompress( decode_base64( $raw_game ) ) );
     $games->{$gid}->{raw} = $raw_game;
   }
   
@@ -971,30 +979,40 @@ sub db_write_game {
   my $user_id = $game->{players}[$game->{my_player}]->{id};
   my $game_id = $game->{id};
   my $finished_time = $game->{updated};
+
+  my $wf_game = $wf->get_game( $game->{id} );
+  $wf_game = encode_base64( compress( encode_json( $wf_game ) ) );
   
-  my $q = 'select count(*) from games where id=? and user_id=?';
+  my $q = 'select game_data from games where id=? and user_id=?';
   my $sth = $wf->{dbh}->prepare( $q );
   $sth->execute( $game_id, $user_id );
   my @res = $sth->fetchrow_array();
   
+  my $record_game = 1;
+
   if ( $res[0] ) {
-    # Game is already in DB for this user
-    $wf->{log}->debug( "Game $game_id already in DB for user $user_id" );
+    # Game is already in DB for this user - check if it's been updated since we stored it
+    $wf->{log}->info( "Game $game_id already in DB for user $user_id" );
+    my $wf_game_hash = sha1_hex( $wf_game );
+    my $db_game_hash = sha1_hex( $res[0] );
+    if ( $wf_game_hash eq $db_game_hash ) {
+      $wf->{log}->info( "Game has not changed since DB write" );
+      $record_game = 0;
+    }
+    else {
+      $wf->{log}->info( "Game has changed since DB write - updating" );
+    }
   }
-  else {
-    $game = $wf->get_game( $game->{id} );
-    
+  
+  if ( $record_game ) {
     # Easier to store this stuff with the game rather than work it out later
     $game->{from_db} = 1;
     set_my_player( $game );
     set_player_info( $game );
-
-    my $game_data = encode_base64( compress( encode_json( $game ) ) );
     
-    $wf->{log}->info( "Writing game $game_id to DB for user $user_id" );
-    $q = 'insert into games ( id, user_id, finished_time, game_data ) values ( ?, ?, ?, ? )';
-    $sth = $wf->{dbh}->prepare( $q );
     $wf->{log}->info( "Recording game $game_id to DB for user $user_id" );
-    $sth->execute( $game_id, $user_id, $finished_time, $game_data );
+    $q = 'replace into games ( id, user_id, finished_time, game_data ) values ( ?, ?, ?, ? )';
+    $sth = $wf->{dbh}->prepare( $q );
+    $sth->execute( $game_id, $user_id, $finished_time, $wf_game );
   }
 }
