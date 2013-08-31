@@ -194,7 +194,7 @@ sub game_list {
   navigate_button( 'game_list', 'Reload game list', { uid => $uid } );
 
   print $q->hr();
-  print $q->h2( 'Running Games ('.scalar( @running_your_turn, @running_their_turn ).'):' );
+  print $q->h2( 'Running Games (' .( scalar( @running_your_turn ) + scalar( @running_their_turn ) ) . '):' );
 
   print $q->h3( 'Your Turn:' );
   print $q->start_ul();
