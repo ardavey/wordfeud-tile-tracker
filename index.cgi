@@ -194,7 +194,7 @@ sub game_list {
   navigate_button( 'game_list', 'Reload game list', { uid => $uid } );
 
   print $q->hr();
-  print $q->h2( 'Running Games:' );
+  print $q->h2( 'Running Games ('.scalar( @running_your_turn, @running_their_turn ).'):' );
 
   print $q->h3( 'Your Turn:' );
   print $q->start_ul();
@@ -221,7 +221,7 @@ sub game_list {
   print "</ul>\n</li>";
   print $q->end_ul();
   
-  print $q->h2( 'Completed Games:' );
+  print $q->h2( 'Completed Games ('.scalar @complete.'):' );
   
   print $q->start_ul();
   if ( scalar @complete ) {
@@ -272,11 +272,11 @@ sub archive_list {
 
   navigate_button( 'archive_list', 'Reload archive', { uid => $uid, token => $token } );
 
-  print $q->h2( 'Archived Games:' );
+  print $q->h2( 'Archived Games ('.scalar @gids.'):' );
   
   print $q->start_ul();
   if ( $games && validate_token( $token, $uid, $sample_game ) ) {
-    foreach my $gid ( reverse sort keys %$games ) {
+    foreach my $gid ( reverse sort @gids ) {
       print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token );
     }
   }
@@ -319,6 +319,8 @@ sub show_game {
     set_player_info( $game );
   }
   
+  $wf->{log}->debug( "show_game:" . Dumper( $game ) );
+
   my $me = $game->{my_player};
 
   $wf->{log}->info( "show_game: ID $id (" . $game->{players}[$me]->{username}
@@ -404,7 +406,7 @@ sub show_game {
   print_tiles( \@remaining, 'Their rack:' );  
   print_board( \@board, $game->{board} );
   print_last_move( $game );
-  print_chat( $game );  
+  print_chat( $game );
 }
 
 #-------------------------------------------------------------------------------
@@ -560,6 +562,7 @@ sub print_game_link {
   my $dist = $wf->set_distribution( $game );
   
   $wf->{log}->debug( "print game link response:" . Dumper( $game ) );
+
   
   $q->delete_all();
   my $game_link = $q->start_form(
@@ -804,22 +807,27 @@ sub print_last_move {
 # Print out any chat messages exchanged in the current game
 sub print_chat {
   my ( $game ) = @_;
-  my @raw_chat = $wf->get_chat_messages( $game->{id} );
-  my @chat = ();
-  foreach my $msg ( @{$raw_chat[0]} ) {
-    my $usr = $game->{player_info}->{$msg->{sender}}->{username};
-    my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
-    $time =~ s/(\d)T(\d)/$1 $2/;
-    my $txt = $msg->{message};
-    utf8::encode( $txt );  # should prevent wide-character warnings when emoticons are present
-    push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
-  }
-  print $q->h4( 'Chat messages:' );
-  if ( scalar @chat ) {
-    print $q->p( { -class => 'chat' }, join( "<br />\n", @chat ) );
+  if ( $game->{from_db} ) {
+    print $q->p( { -class => 'chat' }, 'Chat messages are not available for archived games' );
   }
   else {
-    print $q->p( { -class => 'chat' }, 'No messages' );
+    my @raw_chat = $wf->get_chat_messages( $game->{id} );
+    my @chat = ();
+    foreach my $msg ( @{$raw_chat[0]} ) {
+      my $usr = $game->{player_info}->{$msg->{sender}}->{username};
+      my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
+      $time =~ s/(\d)T(\d)/$1 $2/;
+      my $txt = $msg->{message};
+      utf8::encode( $txt );  # should prevent wide-character warnings when emoticons are present
+      push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
+    }
+    print $q->h4( 'Chat messages:' );
+    if ( scalar @chat ) {
+      print $q->p( { -class => 'chat' }, join( "<br />\n", @chat ) );
+    }
+    else {
+      print $q->p( { -class => 'chat' }, 'No messages' );
+    }
   }
 }
 
@@ -980,39 +988,27 @@ sub db_write_game {
   my $game_id = $game->{id};
   my $finished_time = $game->{updated};
 
-  my $wf_game = $wf->get_game( $game->{id} );
-  $wf_game = encode_base64( compress( encode_json( $wf_game ) ) );
-  
   my $q = 'select game_data from games where id=? and user_id=?';
   my $sth = $wf->{dbh}->prepare( $q );
   $sth->execute( $game_id, $user_id );
   my @res = $sth->fetchrow_array();
   
-  my $record_game = 1;
-
   if ( $res[0] ) {
-    # Game is already in DB for this user - check if it's been updated since we stored it
+    # Game is already in DB for this user
     $wf->{log}->info( "Game $game_id already in DB for user $user_id" );
-    my $wf_game_hash = sha1_hex( $wf_game );
-    my $db_game_hash = sha1_hex( $res[0] );
-    if ( $wf_game_hash eq $db_game_hash ) {
-      $wf->{log}->info( "Game has not changed since DB write" );
-      $record_game = 0;
-    }
-    else {
-      $wf->{log}->info( "Game has changed since DB write - updating" );
-    }
   }
-  
-  if ( $record_game ) {
+  else {
     # Easier to store this stuff with the game rather than work it out later
-    $game->{from_db} = 1;
-    set_my_player( $game );
-    set_player_info( $game );
+    my $full_game = $wf->get_game( $game->{id} );
+    $full_game->{from_db} = 1;
+    set_my_player( $full_game );
+    set_player_info( $full_game );
+
+    $full_game = encode_base64( compress( encode_json( $full_game ) ) );  
     
     $wf->{log}->info( "Recording game $game_id to DB for user $user_id" );
     $q = 'replace into games ( id, user_id, finished_time, game_data ) values ( ?, ?, ?, ? )';
     $sth = $wf->{dbh}->prepare( $q );
-    $sth->execute( $game_id, $user_id, $finished_time, $wf_game );
+    $sth->execute( $game_id, $user_id, $finished_time, $full_game );
   }
 }
