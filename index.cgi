@@ -616,14 +616,14 @@ sub print_game_link {
   $game_link .= '<br />';
   
   my $started = DateTime->from_epoch( epoch => $game->{created}, time_zone => "UTC" );
-  my $updated = DateTime->from_epoch( epoch => $game->{updated}, time_zone => "UTC" );
+  #my $updated = DateTime->from_epoch( epoch => $game->{updated}, time_zone => "UTC" );
   $started =~ s/(\d)T(\d)/$1 $2/;
-  $updated =~ s/(\d)T(\d)/$1 $2/;
+  #$updated =~ s/(\d)T(\d)/$1 $2/;
   
   $game_link .= $q->small(
                           $wf->{dist}->{name},
                           ( $game->{board} == 0 ) ? ' &mdash; Standard board' : ' &mdash; Random board',
-                          "<br/>Started: $started &mdash; Last Move: $updated"
+                          "<br/>Started: $started" # &mdash; Last Move: $updated"
                           );
   $game_link .= '</span>';
 
