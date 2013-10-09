@@ -39,9 +39,9 @@ my $action = $q->param( "action" ) || 'login_form';
 my %dispatch = (
   'login_form'   => \&login_form,
   'do_login'     => \&do_login,
-  'game_list'    => \&game_list,
-  'archive_list' => \&archive_list,
-  'show_game'    => \&show_game,
+  'show_game_list'    => \&show_game_list,
+  'show_archive_list' => \&show_archive_list,
+  'show_game_details'    => \&show_game_details,
   'logout'       => \&logout,
 );
 
@@ -69,7 +69,7 @@ sub login_form {
   if ( $cookies{sessionID} && $cookies{uid} ) {
     print $q->p( 'Restoring previous session' );
     $wf->{log}->info( 'login_form: Found cookie - restoring session' );
-    redirect( 'game_list', { uid => $cookies{uid}->{value} } );
+    redirect( 'show_game_list', { uid => $cookies{uid}->{value} } );
   }
   
   print $q->hr();
@@ -147,7 +147,7 @@ sub do_login {
     $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
     print $q->p( 'Logged in successfully - loading game list' );
     db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
-    redirect( 'game_list', { uid => $wf->{res}->{id} } );
+    redirect( 'show_game_list', { uid => $wf->{res}->{id} } );
   }
   else {
     start_page();
@@ -159,7 +159,7 @@ sub do_login {
 
 #-------------------------------------------------------------------------------
 # Display a list of all games which are still registered on the server
-sub game_list {
+sub show_game_list {
   check_cookie();
   
   my $uid = $q->param( 'uid' );
@@ -175,7 +175,7 @@ sub game_list {
   my @running_their_turn = ();
   my @complete = ();
   
-  $wf->{log}->info( 'game_list: found details for ' . scalar @$games . ' games' );
+  $wf->{log}->info( 'show_game_list: found details for ' . scalar @$games . ' games' );
   foreach my $game ( @$games ) {
     set_my_player( $game );
     if ( $game->{is_running} ) {
@@ -191,7 +191,7 @@ sub game_list {
     }
   }
   
-  navigate_button( 'game_list', 'Reload game list', { uid => $uid } );
+  navigate_button( 'show_game_list', 'Reload game list', { uid => $uid } );
 
   print $q->hr();
   print $q->h2( 'Running Games (' .( scalar( @running_your_turn ) + scalar( @running_their_turn ) ) . '):' );
@@ -247,14 +247,14 @@ sub game_list {
                'your issues then please take the time to leave a post on our Facebook page with the details.' );
 
   print "<ul><li>\n";
-  navigate_button( 'archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
+  navigate_button( 'show_archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
   print "</li></ul>\n";
   
 }
 
 #-------------------------------------------------------------------------------
 # Display a list of archived games
-sub archive_list {
+sub show_archive_list {
   check_cookie();
 
   my $uid = $q->param( 'uid' );
@@ -266,11 +266,11 @@ sub archive_list {
   my @gids = keys %$games;
   my $sample_game = $games->{$gids[0]};
 
-  navigate_button( 'game_list', 'Game list', { uid => $uid } );
+  navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
 
   print $q->hr();
 
-  navigate_button( 'archive_list', 'Reload archive', { uid => $uid, token => $token } );
+  navigate_button( 'show_archive_list', 'Reload archive', { uid => $uid, token => $token } );
 
   print $q->h2( 'Archived Games ('.scalar @gids.'):' );
   
@@ -301,7 +301,7 @@ sub validate_token {
 
 #-------------------------------------------------------------------------------
 # Show the details for a specific game
-sub show_game {
+sub show_game_details {
   check_cookie();
 
   my $id = $q->param( 'gid' );
@@ -319,21 +319,21 @@ sub show_game {
     set_player_info( $game );
   }
   
-  $wf->{log}->debug( "show_game:" . Dumper( $game ) );
+  $wf->{log}->debug( "show_game_details:" . Dumper( $game ) );
 
   my $me = $game->{my_player};
 
-  $wf->{log}->info( "show_game: ID $id (" . $game->{players}[$me]->{username}
+  $wf->{log}->info( "show_game_details: ID $id (" . $game->{players}[$me]->{username}
               . ' vs ' . ${$game->{players}}[1 - $me]->{username} . ')' );
 
   if ( $game->{from_db} ) {
-    navigate_button( 'archive_list', 'Archive list', { uid => $game->{players}[$me]->{id}, token => $token } );
+    navigate_button( 'show_archive_list', 'Archive list', { uid => $game->{players}[$me]->{id}, token => $token } );
     print $q->hr();    
   }
   else {
-    navigate_button( 'game_list', 'Game list', { uid => $game->{players}[$me]->{id} } );
+    navigate_button( 'show_game_list', 'Game list', { uid => $game->{players}[$me]->{id} } );
     print $q->hr();
-    navigate_button( 'show_game', 'Reload game', { gid => $id } );
+    navigate_button( 'show_game_details', 'Reload game', { gid => $id } );
   }
   
   
@@ -573,7 +573,7 @@ sub print_game_link {
   
   $game_link .= $q->hidden(
     -name => 'action',
-    -value => 'show_game',
+    -value => 'show_game_details',
   );
   
   $game_link .= $q->hidden(
@@ -683,7 +683,7 @@ sub print_tiles {
 }
 
 #-------------------------------------------------------------------------------
-# Print the player avatar, name and score for the top of the show_game page
+# Print the player avatar, name and score for the top of the show_game_details page
 sub print_player_header {
   my ( $game, $player ) = @_;
   
