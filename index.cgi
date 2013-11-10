@@ -200,7 +200,7 @@ sub show_game_list {
   print $q->start_ul();
   if ( scalar @running_your_turn ) {
     foreach my $game ( @running_your_turn ) {
-      print_game_link( $game );
+      build_game_link( $game );
     }
   }
   else {
@@ -208,11 +208,11 @@ sub show_game_list {
   }
   print $q->end_ul();
   
-  print $q->h3( 'Their Turn:' );
+  print $q->h3( "Opponent's Turn:" );
   print $q->start_ul();
   if ( scalar @running_their_turn ) {
     foreach my $game ( @running_their_turn ) {
-      print_game_link( $game );
+      build_game_link( $game );
     }
   }
   else {
@@ -226,7 +226,7 @@ sub show_game_list {
   print $q->start_ul();
   if ( scalar @complete ) {
     foreach my $game ( @complete ) {
-      print_game_link( $game );
+      build_game_link( $game );
       db_write_game( $game );
     }
   }
@@ -277,7 +277,7 @@ sub show_archive_list {
   print $q->start_ul();
   if ( $games && validate_token( $token, $uid, $sample_game ) ) {
     foreach my $gid ( reverse sort @gids ) {
-      print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token );
+      build_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token );
     }
   }
   else {
@@ -337,8 +337,8 @@ sub show_game_details {
   }
   
   
-  print_player_header( $game, $me );
-  print_player_header( $game, 1 - $me );
+  build_player_header( $game, $me );
+  build_player_header( $game, 1 - $me );
   
   my @board = ();
   my @rack = ();
@@ -403,10 +403,10 @@ sub show_game_details {
   print $q->h5( 'Language: '.$wf->{dist}->{name} );
 
   print_tiles( \@rack, 'Your rack:' );
-  print_tiles( \@remaining, 'Their rack:' );  
-  print_board( \@board, $game->{board} );
+  print_tiles( \@remaining, "Opponent's rack:" );  
+  build_board( \@board, $game->{board} );
   print_last_move( $game );
-  print_chat( $game );
+  build_chat( $game );
 }
 
 #-------------------------------------------------------------------------------
@@ -450,6 +450,7 @@ sub start_page {
     -style => { 'src' => 'style.css' },
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
   );
+
   print <<HTML;
 <div id="fb-root"></div>
 <script>(function(d, s, id) {
@@ -461,8 +462,13 @@ sub start_page {
 }(document, 'script', 'facebook-jssdk'));</script>
 HTML
 
-  print $q->h1( 'Wordfeud Tile Tracker' );
-  
+  print $q->h1( 'Wordfeud Tile Tracker' );  
+
+  # Facebook "Like" button
+  print <<HTML;
+<div class="fb-like" data-href="https://www.facebook.com/wordfeudtiletracker" data-width="350" data-colorscheme="dark" data-show-faces="false"></div>
+HTML
+
 }
 
 #-------------------------------------------------------------------------------
@@ -471,7 +477,7 @@ sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
   unless ( $cookies{sessionID} ) {
     start_page();
-    print $q->p( 'Returning to login page' );
+    print $q->p( 'Previous session has expired - returning to login page' );
     redirect( 'login_form' );
   }
   set_session_id( $cookies{sessionID}->{value}->[0] );
@@ -554,7 +560,7 @@ sub navigate_button {
 
 #-------------------------------------------------------------------------------
 # Prints the HTML to show a game on the game list page
-sub print_game_link {
+sub build_game_link {
   my ( $game, $raw_game, $token ) = @_;
   
   my $id = $game->{id};
@@ -645,7 +651,7 @@ sub print_tiles {
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
     $label = $q->h4( "Remaining tiles:" );
-    $trailer = $q->h5( "Bag: $bag_count; Their rack: 7" );
+    $trailer = $q->h5( "Bag: $bag_count; Opponent's rack: 7" );
   }
   else {
     my $points = 0;
@@ -684,7 +690,7 @@ sub print_tiles {
 
 #-------------------------------------------------------------------------------
 # Print the player avatar, name and score for the top of the show_game_details page
-sub print_player_header {
+sub build_player_header {
   my ( $game, $player ) = @_;
   
   my $html = '';
@@ -700,7 +706,7 @@ sub print_player_header {
 
 #-------------------------------------------------------------------------------
 # Hacky generation of HTML to show the pretty coloured board, and played tiles
-sub print_board {
+sub build_board {
   my ( $board, $layout ) = @_;
 
   # This 2D array represents the style to be applied to the respective squares on the board.
@@ -805,7 +811,7 @@ sub print_last_move {
 
 #-------------------------------------------------------------------------------
 # Print out any chat messages exchanged in the current game
-sub print_chat {
+sub build_chat {
   my ( $game ) = @_;
   if ( $game->{from_db} ) {
     print $q->p( { -class => 'chat' }, 'Chat messages are not available for archived games' );
@@ -878,11 +884,6 @@ sub get_avatar_url {
 sub end_page {
   print $q->hr();
   
-  # Facebook Like button
-  print <<HTML;
-<div class="fb-like" data-href="https://www.facebook.com/wordfeudtiletracker" data-width="350" data-colorscheme="dark" data-show-faces="false"></div>
-HTML
-
   if ( $action ne 'login_form' ) {
     navigate_button( 'logout', 'Log out' );
   }
