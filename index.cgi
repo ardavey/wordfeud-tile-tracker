@@ -11,6 +11,8 @@ use strict;
 use lib qw( /home/ardavey/perlmods );
 use utf8;
 
+use 5.0100;
+
 use Wordfeud;
 use CGI qw( -nosticky );
 use CGI::Cookie;
@@ -37,55 +39,48 @@ $wf->{log} = get_logger();
 my $action = $q->param( "action" ) || 'login_form';
 
 my %dispatch = (
-  'login_form'   => \&login_form,
-  'do_login'     => \&do_login,
-  'show_game_list'    => \&show_game_list,
+  'login_form' => \&login_form,
+  'do_login' => \&do_login,
+  'show_game_list' => \&show_game_list,
   'show_archive_list' => \&show_archive_list,
-  'show_game_details'    => \&show_game_details,
-  'logout'       => \&logout,
+  'show_game_details' => \&show_game_details,
+  'logout' => \&logout,
 );
 
-( $dispatch{ $action } || \&fallback )->();
+( $dispatch{ $action } || \&login_form )->();
 
-end_page();
+print_page_footer();
 
-#-------------------------------------------------------------------------------
-# If we didn't receive a valid action, boot the user to the login screen
-sub fallback {
-  start_page();
-  print $q->p( 'Invalid action - returning to login page' );
-  redirect( 'login_form' );
-}
 
 #-------------------------------------------------------------------------------
 # Display the login form or, if the sessionID cookie is found, attempt to restore
 # the previous session
 sub login_form {
-  start_page();
+  print_page_header();
 
   $wf->{log}->info( 'login_form: loading page' );
   
   my %cookies = CGI::Cookie->fetch();
   if ( $cookies{sessionID} && $cookies{uid} ) {
-    print $q->p( 'Restoring previous session' );
+    say $q->p( 'Restoring previous session' );
     $wf->{log}->info( 'login_form: Found cookie - restoring session' );
     redirect( 'show_game_list', { uid => $cookies{uid}->{value} } );
   }
   
-  print $q->hr();
-  print $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow',
+  say $q->hr();
+  say $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow',
                'you to view the remaining tiles on any of your current Wordfeud games.' );
-  print $q->p( 'The site is under active development, and will change and evolve with no notice.' );
-  print $q->p( 'Please enter your Wordfeud credentials to load your games.  These details',
+  say $q->p( 'The site is under active development, and will change and evolve with no notice.' );
+  say $q->p( 'Please enter your Wordfeud credentials to load your games.  These details',
                'are only used to talk to the game server - they are not stored by ardavey.com.' );
   
   $q->delete_all();
-  print $q->start_form(
+  say $q->start_form(
     -name => 'login_form',
     -method => 'POST',
     -action => '/',
   );
-  print $q->p(
+  say $q->p(
     'Email address: ',
     $q->textfield(
       -name => 'email',
@@ -93,30 +88,30 @@ sub login_form {
       -size => 30,
     )
   );
-  print $q->p(
+  say $q->p(
     'Password: ',
     $q->password_field(
       -name => 'password',
       -size => 30,
     )
   );
-  print $q->hidden(
+  say $q->hidden(
     -name => 'action',
     -default => 'do_login',
   );
-  print $q->p( $q->submit(
+  say $q->p( $q->submit(
     -name => 'submit_form',
     -value => 'Log in',
     )
   );
-  print $q->end_form;
+  say $q->end_form;
 
-  print $q->p( 'I will try my best not to break the site so that you can continue to',
+  say $q->p( 'I will try my best not to break the site so that you can continue to',
                'use it, but it is of course presented without any guarantees.' );
-  print $q->p( 'If you visit the site at some time and the colours/layout look weird,',
+  say $q->p( 'If you visit the site at some time and the colours/layout look weird,',
                'try a full refresh (Shift-Refresh or Ctrl-Refresh, depending on your',
                'browser) to reload the stylesheet.' );
-  print $q->p( 'Finally, please report any issues or request features using the feedback',
+  say $q->p( 'Finally, please report any issues or request features using the feedback',
                'link below. Development of this site is driven equally by things I want',
                'to do and things the community would like!' );
 }
@@ -143,16 +138,16 @@ sub do_login {
         -expires => '+2d',
     );
     
-    start_page( [ $cookie_session, $cookie_uid ] );
+    print_page_header( [ $cookie_session, $cookie_uid ] );
     $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
-    print $q->p( 'Logged in successfully - loading game list' );
+    say $q->p( 'Logged in successfully - loading game list' );
     db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
     redirect( 'show_game_list', { uid => $wf->{res}->{id} } );
   }
   else {
-    start_page();
+    print_page_header();
     $wf->{log}->warn( 'User '.$q->param( 'email' ).' failed to log in' );
-    print $q->p( 'Failed to log in!' );
+    say $q->p( 'Failed to log in!' );
     redirect( 'login_page' );
   }
 }
@@ -165,7 +160,7 @@ sub show_game_list {
   my $uid = $q->param( 'uid' );
   my $games = $wf->get_games();
   unless ( $games ) {
-    print $q->p( 'Invalid session - please log in again' );
+    say $q->p( 'Invalid session - please log in again' );
     redirect( 'logout' );
   }
   
@@ -191,65 +186,88 @@ sub show_game_list {
     }
   }
   
-  navigate_button( 'show_game_list', 'Reload game list', { uid => $uid } );
+  print_navigate_button( 'show_game_list', 'Reload game list', { uid => $uid } );
+  
+  say $q->p( 'Click on the relevant section headers to show/hide the contents, indicated by',
+             $q->img( { src => 'expand.png', alt => '[+-]' } ) );
 
-  print $q->hr();
-  print $q->h2( 'Running Games (' .( scalar( @running_your_turn ) + scalar( @running_their_turn ) ) . '):' );
-
-  print $q->h3( 'Your Turn:' );
-  print $q->start_ul();
+  say $q->hr();
+  say $q->h2( 'Running Games (' .( scalar( @running_your_turn ) + scalar( @running_their_turn ) ).')' );
+    
+  say $q->h3( $q->span( { id => 'yourtoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+-]' } ),
+                        ' Your Turn ('.scalar( @running_your_turn ).')',
+                      ) );
+  
+  say $q->start_div( { class => 'togglable', id => 'yourturnsection' } );
+  say $q->start_ul();
   if ( scalar @running_your_turn ) {
     foreach my $game ( @running_your_turn ) {
-      build_game_link( $game );
+      print_game_link( $game );
     }
   }
   else {
-    print $q->li( '<i>No games</i>' );
+    say $q->li( $q->em( 'No games to show' ) );
   }
-  print $q->end_ul();
+  say $q->end_ul();
+  say $q->end_div();
   
-  print $q->h3( "Opponent's Turn:" );
-  print $q->start_ul();
+  say $q->h3( $q->span( { id => 'theirtoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+-]' } ),
+                        " Opponent's Turn (".scalar( @running_their_turn ).')',
+                      ) );
+
+  say $q->start_div( { class => 'togglable', id => 'theirturnsection' } );
+  say $q->start_ul();
   if ( scalar @running_their_turn ) {
     foreach my $game ( @running_their_turn ) {
-      build_game_link( $game );
+      print_game_link( $game );
     }
   }
   else {
-    print $q->li( '<i>No games</i>' );
+    say $q->li( $q->em( 'No games to show' ) );
   }
-  print "</ul>\n</li>";
-  print $q->end_ul();
+  say $q->end_ul();
+  say $q->end_div();
   
-  print $q->h2( 'Completed Games ('.scalar @complete.'):' );
+  say $q->h2( $q->span( { id => 'completedtoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+-]' } ),
+                        'Completed Games ('.scalar( @complete ).')',
+                      ) );
   
-  print $q->start_ul();
+  say $q->start_div( { class => 'togglable', id => 'completedsection' } );
+
+  say $q->start_ul();
   if ( scalar @complete ) {
     foreach my $game ( @complete ) {
-      build_game_link( $game );
+      print_game_link( $game );
       db_write_game( $game );
     }
   }
   else {
-    print $q->li( '<i>No games</i>' );
+    say $q->li( $q->em( 'No games to show' ) );
   }
-  print $q->end_ul();
+  say $q->end_ul();
+  say $q->end_div();
   
-  print $q->h2( 'Archived Games: (EXPERIMENTAL)' );
-  print $q->p( 'This section will show you all old games which have at some time been seen',
-               'in the "Completed Games" section above  i.e. it will only show games which the',
-               'site was previously aware of since 17-August-13' );
-  print $q->p( 'This just means that you need to log into the website',
-               'at least once between completing a game and that game being deleted',
-               'inside the Wordfeud app itself.' );
-  print $q->p( 'At present, this is very much an experimental feature - it is vital that you let us know if',
-               'you see any strange or unexpected behaviour.  If logging out and back in does not resolve',
-               'your issues then please take the time to leave a post on our Facebook page with the details.' );
+  say $q->h2( $q->span( { id => 'archivetoggle' },
+                          $q->img( { src => 'expand.png', alt => '[+-]' } ),
+                          'Archived Games',
+                      ) );
+  
+  say $q->start_div( { class => 'togglable', id => 'archivesection' } );
 
-  print "<ul><li>\n";
-  navigate_button( 'show_archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
-  print "</li></ul>\n";
+  say $q->p( 'This section will show you all old games which have at some time been seen',
+             'in the "Completed Games" section above.' );
   
+  say $q->p( 'This just means that you need to log into the website',
+             'at least once between completing a game and that game being deleted',
+             'inside the Wordfeud app itself.' );
+
+  say $q->start_ul(), $q->start_li();
+  print_navigate_button( 'show_archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
+  say $q->end_li(), $q->end_ul();
+  say $q->end_div();
 }
 
 #-------------------------------------------------------------------------------
@@ -259,6 +277,8 @@ sub show_archive_list {
 
   my $uid = $q->param( 'uid' );
   my $token = $q->param( 'token' );
+  
+  my $game_count = db_get_game_count( $uid );
   my $games = db_get_games( $uid );
 
   $wf->{log}->debug( "Fetched games from DB:" . Dumper( $games ) );
@@ -266,28 +286,28 @@ sub show_archive_list {
   my @gids = keys %$games;
   my $sample_game = $games->{$gids[0]};
 
-  navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
+  print_navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
 
-  print $q->hr();
+  say $q->hr();
 
-  navigate_button( 'show_archive_list', 'Reload archive', { uid => $uid, token => $token } );
+  print_navigate_button( 'show_archive_list', 'Reload archive', { uid => $uid, token => $token } );
 
-  print $q->h2( 'Archived Games ('.scalar @gids.'):' );
+  say $q->h2( 'Archived Games ('.scalar @gids.'):' );
   
-  print $q->start_ul();
+  say $q->start_ul();
   if ( $games && validate_token( $token, $uid, $sample_game ) ) {
-    foreach my $gid ( reverse sort @gids ) {
-      build_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token );
+    foreach my $gid ( sort { $b <=> $a } @gids ) {
+      print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token );
     }
   }
   else {
-    print $q->li( '<i>No games</i>' );
+    say $q->li( '<i>No games</i>' );
   }
-  print $q->end_ul();
+  say $q->end_ul();
 }
 
 #-------------------------------------------------------------------------------
-# Really primitive token system to mitigate against people from reading any old data from the DB
+# Really primitive token system to mitigate against people reading any old data from the DB
 sub validate_token {
   my ( $token, $uid, $game ) = @_;
   
@@ -327,25 +347,25 @@ sub show_game_details {
               . ' vs ' . ${$game->{players}}[1 - $me]->{username} . ')' );
 
   if ( $game->{from_db} ) {
-    navigate_button( 'show_archive_list', 'Archive list', { uid => $game->{players}[$me]->{id}, token => $token } );
-    print $q->hr();    
+    print_navigate_button( 'show_archive_list', 'Archive list', { uid => $game->{players}[$me]->{id}, token => $token } );
+    say $q->hr();    
   }
   else {
-    navigate_button( 'show_game_list', 'Game list', { uid => $game->{players}[$me]->{id} } );
-    print $q->hr();
-    navigate_button( 'show_game_details', 'Reload game', { gid => $id } );
+    print_navigate_button( 'show_game_list', 'Game list', { uid => $game->{players}[$me]->{id} } );
+    say $q->hr();
+    print_navigate_button( 'show_game_details', 'Reload game', { gid => $id } );
   }
   
   
-  build_player_header( $game, $me );
-  build_player_header( $game, 1 - $me );
+  print_player_info( $game, $me );
+  print_player_info( $game, 1 - $me );
   
   my @board = ();
   my @rack = ();
   my @players = ();
   
   # Create an empty board - a 15x15 array. Well, an array of anonymous array references.
-  # We're going to use this to print out the board later.
+  # We're going to use this to say out the board later.
   foreach my $r ( 0..14 ) {
     $board[$r] = [qw( 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 )];
   }
@@ -400,13 +420,13 @@ sub show_game_details {
     }
   }
   
-  print $q->h5( 'Language: '.$wf->{dist}->{name} );
+  say $q->h5( 'Language: '.$wf->{dist}->{name} );
 
   print_tiles( \@rack, 'Your rack:' );
   print_tiles( \@remaining, "Opponent's rack:" );  
-  build_board( \@board, $game->{board} );
+  print_board( \@board, $game->{board} );
   print_last_move( $game );
-  build_chat( $game );
+  print_chat( $game );
 }
 
 #-------------------------------------------------------------------------------
@@ -418,16 +438,16 @@ sub logout {
     -value => '',
     -expires => '-1d',
   );
-  start_page( $cookie );
+  print_page_header( $cookie );
   $wf->{log}->info( 'logout' );
-  print $q->p( 'Logging out...' );  
+  say $q->p( 'Logging out...' );  
   $wf->log_out();
   redirect( 'login_form' );
 }
 
 #-------------------------------------------------------------------------------
-# Very basic start of page stuff.  Connect to DB if appropoiate.
-sub start_page {
+# Very basic start of page stuff.  Connect to DB if appropriate.
+sub print_page_header {
   my ( $cookies ) = @_;
   
   db_connect();
@@ -441,33 +461,25 @@ sub start_page {
   if ( $cookies ) {
     $headers{ '-cookie' } = $cookies;
   }
-  print $q->header( %headers );
+  say $q->header( %headers );
   
   $q->default_dtd( '-//WAPFORUM//DTD XHTML Mobile 1.2//EN http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd' );
-  print $q->start_html(
+  
+  say $q->start_html(
     -dtd => 1,
     -title => 'Wordfeud Tile Tracker',
     -style => { 'src' => 'style.css' },
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
   );
 
-  print <<HTML;
-<div id="fb-root"></div>
-<script>(function(d, s, id) {
-  var js, fjs = d.getElementsByTagName(s)[0];
-  if (d.getElementById(id)) return;
-  js = d.createElement(s); js.id = id;
-  js.src = "//connect.facebook.net/en_GB/all.js#xfbml=1";
-  fjs.parentNode.insertBefore(js, fjs);
-}(document, 'script', 'facebook-jssdk'));</script>
-HTML
+  say '<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>';
+  say '<script src="wordfeudtiletracker.js"></script>';
 
-  print $q->h1( 'Wordfeud Tile Tracker' );  
+  say $q->h1( 'Wordfeud Tile Tracker' );  
 
   # Facebook "Like" button
-  print <<HTML;
-<div class="fb-like" data-href="https://www.facebook.com/wordfeudtiletracker" data-width="350" data-colorscheme="dark" data-show-faces="false"></div>
-HTML
+  say '<div id="fb-root"></div>';
+  say '<div class="fb-like" data-href="https://www.facebook.com/wordfeudtiletracker" data-width="350" data-colorscheme="dark" data-show-faces="false"></div>'
 
 }
 
@@ -476,14 +488,14 @@ HTML
 sub check_cookie {
   my %cookies = CGI::Cookie->fetch();
   unless ( $cookies{sessionID} ) {
-    start_page();
-    print $q->p( 'Previous session has expired - returning to login page' );
+    print_page_header();
+    say $q->p( 'Previous session has expired - returning to login page' );
     redirect( 'login_form' );
   }
   set_session_id( $cookies{sessionID}->{value}->[0] );
   $wf->{uid} = $cookies{uid}->{value}->[0];
   
-  start_page( [ $cookies{sessionID}, $cookies{uid} ] );
+  print_page_header( [ $cookies{sessionID}, $cookies{uid} ] );
 }
 
 #-------------------------------------------------------------------------------
@@ -492,82 +504,82 @@ sub redirect {
   my ( $action, $params ) = @_;
   
   $wf->{log}->info( "redirect: Redirecting to $action" );
-  print $q->p( 'Hit the button below if not automatically redirected.' );
+  say $q->p( 'Hit the button below if not automatically redirected.' );
 
   $q->delete_all();
-  print $q->start_form(
+  say $q->start_form(
     -name => 'redirect_form',
     -method => 'POST',
     -action => '/',
   );
 
-  print $q->hidden(
+  say $q->hidden(
     -name => 'action',
     -default => $action,
   );
   
   foreach my $field ( keys %$params ) {
-    print $q->hidden(
+    say $q->hidden(
       -name => $field,
       -value => $params->{$field},
     );
   }  
   
-  print $q->p(
+  say $q->p(
     $q->submit(
       -name => 'submit_form',
       -value => 'Continue'
     )
   );
   
-  print $q->end_form();
-  print '<script type="text/javascript">document.forms[0].submit();</script>';
+  say $q->end_form();
+  say '<script type="text/javascript">document.forms[0].submit();</script>';
 }
 
 #-------------------------------------------------------------------------------
 # Generate a button for navigating to one of the other pages
-sub navigate_button {
+sub print_navigate_button {
   my ( $action, $label, $fields ) = @_;
   
   $q->delete_all();
-  print "<p>\n";
-  print $q->start_form(
+  say "<p>";
+  say $q->start_form(
     -name => 'navigate_button',
     -method => 'POST',
     -action => '/',
   );
   
-  print $q->hidden(
+  say $q->hidden(
     -name => 'action',
     -default => $action,
   );
   
   foreach my $field ( keys %$fields ) {
-    print $q->hidden(
+    say $q->hidden(
       -name => $field,
       -value => $fields->{$field},
     );
   }
 
-  print $q->submit(
+  say $q->submit(
     -name => 'submit_form',
     -value => $label,
   );
     
-  print $q->end_form();
-  print "</p>\n";
+  say $q->end_form();
+  say "</p>";
 }
 
 #-------------------------------------------------------------------------------
 # Prints the HTML to show a game on the game list page
-sub build_game_link {
+sub print_game_link {
   my ( $game, $raw_game, $token ) = @_;
   
   my $id = $game->{id};
   my $me = $game->{my_player};
   my $dist = $wf->set_distribution( $game );
   
-  $wf->{log}->debug( "print game link response:" . Dumper( $game ) );
+  $wf->{log}->debug( "say game link response:" . Dumper( $game ) );
 
   
   $q->delete_all();
@@ -635,7 +647,7 @@ sub build_game_link {
 
   $game_link .= $q->end_form();
   
-  print $q->li( $game_link );
+  say $q->li( $game_link );
 }
 
 #-------------------------------------------------------------------------------
@@ -650,7 +662,7 @@ sub print_tiles {
   # rack combo so override the label accordingly
   if ( $tile_count > 7 ) {
     my $bag_count = $tile_count - 7;
-    $label = $q->h4( "Remaining tiles:" );
+    $label = $q->h4( 'Remaining tiles:' );
     $trailer = $q->h5( "Bag: $bag_count; Opponent's rack: 7" );
   }
   else {
@@ -662,35 +674,36 @@ sub print_tiles {
     $trailer = $q->h5( "($points points)" );
   }
   
-  print $q->p( $label );
+  say $q->p( $label );
   
   my $count = 0;
   if ( $tile_count ) {
-    print "<table><tr>\n";
+    say $q->start_table();
+    say '<tr>';
     while ( my $tile = shift @$tiles ) {
       $count++;
       my $print_tile = $tile;
       utf8::encode( $print_tile );
-      print "<td class='rack'>$print_tile";
+      say $q->start_td( { class => 'rack' } ), $print_tile;
       if ( $tile ne '?' ) {
-        print "<sub class='score'>$wf->{dist}->{points}->{$tile}</sub>";
+        say $q->Sub( { class => 'score' }, $wf->{dist}->{points}->{$tile} );
       }
-      print "</td>\n";
+      say $q->end_td();
       if ( $count % 10 == 0 ) {
-        print "</tr>\n<tr>\n";
+        say '</tr>', '<tr>';
       }
     }
-    print "</tr></table>\n";
-    print "$trailer\n";
+    say '</tr>', $q->end_table();
+    say "$trailer";
   }
   else {
-    print $q->p( '<i>Empty</i>' );
+    say $q->p( $q->em( 'Empty' ) );
   }
 }
 
 #-------------------------------------------------------------------------------
-# Print the player avatar, name and score for the top of the show_game_details page
-sub build_player_header {
+# Say the player avatar, name and score for the top of the show_game_details page
+sub print_player_info {
   my ( $game, $player ) = @_;
   
   my $html = '';
@@ -701,12 +714,12 @@ sub build_player_header {
     $html .= ' &larr;';
   }
   
-  print $q->h2( $html );
+  say $q->h2( $html );
 }
 
 #-------------------------------------------------------------------------------
 # Hacky generation of HTML to show the pretty coloured board, and played tiles
-sub build_board {
+sub print_board {
   my ( $board, $layout ) = @_;
 
   # This 2D array represents the style to be applied to the respective squares on the board.
@@ -730,7 +743,7 @@ sub build_board {
     [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
   );
   
-  print $q->h4( 'Board:' );
+  say $q->h4( 'Board:' );
   
   my $table_html = "<table class='board'>\n";
   foreach my $r ( 0..14 ) {
@@ -770,11 +783,11 @@ sub build_board {
   }
   $table_html .= "</table>\n";
   
-  print $q->p( $table_html );
+  say $q->p( $table_html );
 }
 
 #-------------------------------------------------------------------------------
-# Print details of the last move played
+# Say details of the last move played
 sub print_last_move {
   my ( $game ) = @_;
   
@@ -805,16 +818,16 @@ sub print_last_move {
     else {
       return;
     }
-    print $q->h5( $out );
+    say $q->h5( $out );
   }
 }
 
 #-------------------------------------------------------------------------------
-# Print out any chat messages exchanged in the current game
-sub build_chat {
+# Say out any chat messages exchanged in the current game
+sub print_chat {
   my ( $game ) = @_;
   if ( $game->{from_db} ) {
-    print $q->p( { -class => 'chat' }, 'Chat messages are not available for archived games' );
+    say $q->p( { -class => 'chat' }, 'Chat messages are not available for archived games' );
   }
   else {
     my @raw_chat = $wf->get_chat_messages( $game->{id} );
@@ -827,12 +840,12 @@ sub build_chat {
       utf8::encode( $txt );  # should prevent wide-character warnings when emoticons are present
       push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
     }
-    print $q->h4( 'Chat messages:' );
+    say $q->h4( 'Chat messages:' );
     if ( scalar @chat ) {
-      print $q->p( { -class => 'chat' }, join( "<br />\n", @chat ) );
+      say $q->p( { class => 'chat' }, join( "<br />\n", @chat ) );
     }
     else {
-      print $q->p( { -class => 'chat' }, 'No messages' );
+      say $q->p( { class => 'chat' }, 'No messages' );
     }
   }
 }
@@ -881,23 +894,22 @@ sub get_avatar_url {
 
 #-------------------------------------------------------------------------------
 # Add the footer and wrap up our HTML
-sub end_page {
-  print $q->hr();
+sub print_page_footer {
+  say $q->hr();
   
   if ( $action ne 'login_form' ) {
-    navigate_button( 'logout', 'Log out' );
+    print_navigate_button( 'logout', 'Log out' );
   }
 
-  print $q->p( 'You can leave feedback/comments/suggestions via the',
-               $q->a( { href => 'http://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ),
-               "or, if you don't have a Facebook account, the",
-               $q->a( { href => 'http://www.ardavey.com/2013/03/11/wordfeud-tile-tracker/#respond' }, 'blog' ) );
+  say $q->p( 'You can leave feedback/comments/suggestions via the',
+             $q->a( { href => 'http://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ) . '.'
+           );
 
   hit_counter();
 
-  print $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
-  print $q->p( $q->small( 'Timestamps are presented in UTC.<br/>The site is provided free of charge with no guarantees.' ) );
-  print $q->end_html();
+  say $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
+  say $q->p( $q->small( 'Timestamps are presented in UTC.<br/>The site is provided free of charge with no guarantees.' ) );
+  say $q->end_html();
   
   if ( $wf->{dbh} ) {
     $wf->{log}->debug( 'Disconnecting from DB' );
@@ -912,21 +924,34 @@ sub hit_counter {
   
   # 'hits' is a txt file where the first row represents the number of hits
   if ( -e "./wf_hits" ) {
-    open HITREAD, "< wf_hits";
+    open HITREAD, "< wf_hits" or $wf->{log}->error( "Unable to open counter file for read: $!" );
     $hits = <HITREAD>;
     close HITREAD;
     chomp $hits;
   }
   else {
-    $hits = 0;
+    $wf->{log}->error( 'Can not find counter file' );
   }
   
-  print $q->p( $q->small( '&#169; ardavey 2013<br/>' . ++$hits . ' page views' ) );
+  my $rewrite_hits = 1;
   
-  # attempt to write the new hitcounter value to file
-  open HITWRITE, "> wf_hits";
-  print HITWRITE $hits;
-  close HITWRITE;
+  if ( $hits ) {
+    $hits++;
+  }
+  else {
+    $hits = 'many many';
+    $rewrite_hits = 0;
+  }
+  
+  say $q->p( $q->small( '&#169; ardavey 2013-14<br/>' . $hits . ' page views' ) );
+  
+  if ( $rewrite_hits ) {
+    # attempt to write the new hitcounter value to file
+    open HITWRITE, "> wf_hits" or $wf->{log}->error( "Unable to open counter file for write: $!" );
+    say HITWRITE $hits;
+    close HITWRITE;
+  }
+  
 }
 
 
@@ -963,9 +988,23 @@ sub db_record_user {
 }
 
 #-------------------------------------------------------------------------------
-# Get all games from the DB for the current user.
-sub db_get_games {
+# Get just a count of the games in the DB for the current user.
+sub db_get_game_count {
   my ( $uid ) = @_;
+  
+  my $q = 'select count() from games where user_id = ?';
+  my $sth = $wf->{dbh}->prepare( $q );
+  $sth->execute( $uid );
+  
+  my ( $count ) = $sth->fetchrow_array();
+  
+  return $count;
+}
+
+#-------------------------------------------------------------------------------
+# Get all games from the DB for the current user, with optional pagination.
+sub db_get_games {
+  my ( $uid, $page ) = @_;
   
   my $q = 'select id, game_data from games where user_id = ?';
   my $sth = $wf->{dbh}->prepare( $q );
