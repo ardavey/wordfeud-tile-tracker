@@ -188,14 +188,16 @@ sub show_game_list {
   
   print_navigate_button( 'show_game_list', 'Reload game list', { uid => $uid } );
   
-  say $q->p( 'Click on the relevant section headers to show/hide the contents, indicated by',
-             $q->img( { src => 'expand.png', alt => '[+-]' } ) );
+  say $q->p( 'Click/tap on the relevant section headers (indicated by ',
+             $q->img( { src => 'expand.png', alt => '[+]' } ),
+             ') to show/hide the contents.'
+            );
 
   say $q->hr();
   say $q->h2( 'Running Games (' .( scalar( @running_your_turn ) + scalar( @running_their_turn ) ).')' );
     
-  say $q->h3( $q->span( { id => 'yourtoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+-]' } ),
+  say $q->h3( $q->span( { class => 'clickable', id => 'yourtoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+]' } ),
                         ' Your Turn ('.scalar( @running_your_turn ).')',
                       ) );
   
@@ -212,8 +214,8 @@ sub show_game_list {
   say $q->end_ul();
   say $q->end_div();
   
-  say $q->h3( $q->span( { id => 'theirtoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+-]' } ),
+  say $q->h3( $q->span( { class => 'clickable', id => 'theirtoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+]' } ),
                         " Opponent's Turn (".scalar( @running_their_turn ).')',
                       ) );
 
@@ -230,8 +232,8 @@ sub show_game_list {
   say $q->end_ul();
   say $q->end_div();
   
-  say $q->h2( $q->span( { id => 'completedtoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+-]' } ),
+  say $q->h2( $q->span( { class => 'clickable', id => 'completedtoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+]' } ),
                         'Completed Games ('.scalar( @complete ).')',
                       ) );
   
@@ -250,8 +252,8 @@ sub show_game_list {
   say $q->end_ul();
   say $q->end_div();
   
-  say $q->h2( $q->span( { id => 'archivetoggle' },
-                          $q->img( { src => 'expand.png', alt => '[+-]' } ),
+  say $q->h2( $q->span( { class => 'clickable', id => 'archivetoggle' },
+                          $q->img( { src => 'expand.png', alt => '[+]' } ),
                           'Archived Games',
                       ) );
   
@@ -260,12 +262,15 @@ sub show_game_list {
   say $q->p( 'This section will show you all old games which have at some time been seen',
              'in the "Completed Games" section above.' );
   
-  say $q->p( 'This just means that you need to log into the website',
-             'at least once between completing a game and that game being deleted',
-             'inside the Wordfeud app itself.' );
+  say $q->p( 'This means that all you need to do to archive your games is log into',
+             'the website at least once between completing the game and that game being deleted',
+             'inside the Wordfeud app itself - if you are a regular user then this will',
+             'be no extra effort!' );
 
   say $q->start_ul(), $q->start_li();
-  print_navigate_button( 'show_archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ) } );
+  
+  #say $q->h4( 'Currently undergoing maintenance.  Newly finished games will still be recorded.' );
+  print_navigate_button( 'show_archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ), page => 1 } );
   say $q->end_li(), $q->end_ul();
   say $q->end_div();
 }
@@ -277,23 +282,67 @@ sub show_archive_list {
 
   my $uid = $q->param( 'uid' );
   my $token = $q->param( 'token' );
+  my $page = $q->param( 'page' );
+  $page ||= 1;
   
+  my $gpp = 50;  # "games per page"
   my $game_count = db_get_game_count( $uid );
-  my $games = db_get_games( $uid );
+  
+  my $correction = 1;
+  
+  if ( ( $game_count % $gpp ) == 0 ) {
+    # edge case - number of games is a multiple of the gpp
+    $correction = 0;
+  }
+  
+  my $max_page = int( $game_count / $gpp ) + $correction;
+
+  if ( $page > $max_page ) {
+    # naughty user has tried to request too high a page number - goodbye
+    redirect( 'logout' );
+  }
+  
+  # OK, get the current page's games from the DB
+  my $offset = ( $page - 1 ) * $gpp;
+  my $games = db_get_games( $uid, $gpp, $offset );
 
   $wf->{log}->debug( "Fetched games from DB:" . Dumper( $games ) );
+
+  print_navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
+
+  my $floor = ( $page - 1 ) * $gpp + 1;
+  my $ceiling = $page * $gpp;
+  if ( $ceiling > $game_count ) {
+    $ceiling = $game_count;
+  }
+  
+  say $q->hr();
+  
+  say $q->h2( 'Archived Games' );
+  
+  if ( $page > 1 ) {
+    print_navigate_button(
+      'show_archive_list',
+      '<< Previous page',
+      { uid => $uid, token => $token, page => $page - 1 }
+    );
+  }
+  
+  say $q->h3( "Page $page of $max_page" );
+
+  if ( $page < $max_page ) {
+    print_navigate_button(
+      'show_archive_list',
+      'Next page >>',
+      { uid => $uid, token => $token, page => $page + 1 }
+    );
+  }
+
+  say $q->h5( "Showing $floor - $ceiling of $game_count games" );
 
   my @gids = keys %$games;
   my $sample_game = $games->{$gids[0]};
 
-  print_navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
-
-  say $q->hr();
-
-  print_navigate_button( 'show_archive_list', 'Reload archive', { uid => $uid, token => $token } );
-
-  say $q->h2( 'Archived Games ('.scalar @gids.'):' );
-  
   say $q->start_ul();
   if ( $games && validate_token( $token, $uid, $sample_game ) ) {
     foreach my $gid ( sort { $b <=> $a } @gids ) {
@@ -301,9 +350,26 @@ sub show_archive_list {
     }
   }
   else {
-    say $q->li( '<i>No games</i>' );
+    say $q->li( $q->em( 'No games' ) );
   }
   say $q->end_ul();
+  if ( $page > 1 ) {
+    print_navigate_button(
+      'show_archive_list',
+      '<< Previous page',
+      { uid => $uid, token => $token, page => $page - 1 }
+    );
+  }
+  
+  say $q->h3( "Page $page of $max_page" );
+
+  if ( $page < $max_page ) {
+    print_navigate_button(
+      'show_archive_list',
+      'Next page >>',
+      { uid => $uid, token => $token, page => $page + 1 }
+    );
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -355,7 +421,6 @@ sub show_game_details {
     say $q->hr();
     print_navigate_button( 'show_game_details', 'Reload game', { gid => $id } );
   }
-  
   
   print_player_info( $game, $me );
   print_player_info( $game, 1 - $me );
@@ -424,8 +489,7 @@ sub show_game_details {
 
   print_tiles( \@rack, 'Your rack:' );
   print_tiles( \@remaining, "Opponent's rack:" );  
-  print_board( \@board, $game->{board} );
-  print_last_move( $game );
+  print_board_and_last_move( \@board, $game );
   print_chat( $game );
 }
 
@@ -468,12 +532,12 @@ sub print_page_header {
   say $q->start_html(
     -dtd => 1,
     -title => 'Wordfeud Tile Tracker',
-    -style => { 'src' => 'style.css' },
+    -style => { 'src' => "style.css?v=$$" },
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
   );
 
   say '<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>';
-  say '<script src="wordfeudtiletracker.js"></script>';
+  say "<script src=\"wordfeudtiletracker.js?v=$$\"></script>";
 
   say $q->h1( 'Wordfeud Tile Tracker' );  
 
@@ -542,7 +606,7 @@ sub print_navigate_button {
   my ( $action, $label, $fields ) = @_;
   
   $q->delete_all();
-  say "<p>";
+  say $q->start_p();
   say $q->start_form(
     -name => 'navigate_button',
     -method => 'POST',
@@ -567,7 +631,7 @@ sub print_navigate_button {
   );
     
   say $q->end_form();
-  say "</p>";
+  say $q->end_p();
 }
 
 #-------------------------------------------------------------------------------
@@ -719,9 +783,11 @@ sub print_player_info {
 
 #-------------------------------------------------------------------------------
 # Hacky generation of HTML to show the pretty coloured board, and played tiles
-sub print_board {
-  my ( $board, $layout ) = @_;
+sub print_board_and_last_move {
+  my ( $board, $game ) = @_;
 
+  my $layout = $game->{board};
+  
   # This 2D array represents the style to be applied to the respective squares on the board.
   # This is pretty ugly and evil, but it's amazing what you can come up with in a spare half
   # hour in Starbucks!
@@ -743,7 +809,10 @@ sub print_board {
     [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
   );
   
-  say $q->h4( 'Board:' );
+  say $q->h4( $q->span( { class => 'clickable', id => 'boardtoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+]' } ),
+                        'Board:'
+                      ) );
   
   my $table_html = "<table class='board'>\n";
   foreach my $r ( 0..14 ) {
@@ -783,7 +852,12 @@ sub print_board {
   }
   $table_html .= "</table>\n";
   
+  say $q->start_div( { class => 'togglable', id => 'boardsection' } );
+  
+  print_last_move( $game );
   say $q->p( $table_html );
+  
+  say $q->end_div();
 }
 
 #-------------------------------------------------------------------------------
@@ -826,12 +900,12 @@ sub print_last_move {
 # Say out any chat messages exchanged in the current game
 sub print_chat {
   my ( $game ) = @_;
-  if ( $game->{from_db} ) {
-    say $q->p( { -class => 'chat' }, 'Chat messages are not available for archived games' );
-  }
-  else {
+  
+  my @chat = ();
+  
+
+  if ( ! $game->{from_db} ) {
     my @raw_chat = $wf->get_chat_messages( $game->{id} );
-    my @chat = ();
     foreach my $msg ( @{$raw_chat[0]} ) {
       my $usr = $game->{player_info}->{$msg->{sender}}->{username};
       my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
@@ -840,14 +914,26 @@ sub print_chat {
       utf8::encode( $txt );  # should prevent wide-character warnings when emoticons are present
       push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
     }
-    say $q->h4( 'Chat messages:' );
-    if ( scalar @chat ) {
-      say $q->p( { class => 'chat' }, join( "<br />\n", @chat ) );
-    }
-    else {
-      say $q->p( { class => 'chat' }, 'No messages' );
-    }
   }
+  
+  say $q->h4( $q->span( { class => 'clickable', id => 'chattoggle' },
+                        $q->img( { src => 'expand.png', alt => '[+]' } ),
+                        'Chat messages ('.scalar( @chat ).'):'
+                      ) );
+  
+  say $q->start_p( { class => 'chat togglable', id => 'chatsection' } );
+  
+  if ( $game->{from_db} ) {
+    say 'Chat messages are not available for archived games';
+  }  
+  elsif ( scalar @chat ) {
+    say join( "<br />\n", @chat );
+  }
+  else {
+    say 'No messages';
+  }
+  
+  say $q->end_p();
 }
 
 #-------------------------------------------------------------------------------
@@ -1002,13 +1088,15 @@ sub db_get_game_count {
 }
 
 #-------------------------------------------------------------------------------
-# Get all games from the DB for the current user, with optional pagination.
+# Get all games from the DB for the current user, with pagination.
 sub db_get_games {
-  my ( $uid, $page ) = @_;
+  my ( $uid, $limit, $offset ) = @_;
   
-  my $q = 'select id, game_data from games where user_id = ?';
-  my $sth = $wf->{dbh}->prepare( $q );
-  $sth->execute( $uid );
+  my $sql = 'select id, game_data from games where user_id = ? limit ?, ?';
+  my @bv = ( $uid, $offset, $limit );
+  $wf->{log}->info( 'db_get_games executing: '.$sql.' [ '.join( ',', @bv ).' ]' );
+  my $sth = $wf->{dbh}->prepare( $sql );
+  $sth->execute( @bv );
   
   my $games = {};
   while ( my ( $gid, $raw_game ) = $sth->fetchrow_array() ) {

@@ -68,6 +68,10 @@ sub.score, sup.score {
   font-size: 6pt !important;
 }
 
+.clickable {
+  cursor: pointer;
+}
+
 span.winning {
  color: #bfb; 
 }

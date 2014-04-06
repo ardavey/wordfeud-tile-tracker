@@ -7,21 +7,29 @@
 }(document, 'script', 'facebook-jssdk'));
 
 $( document ).ready( function() {
-  $( "div.togglable" ).hide();
+  $( ".togglable" ).hide();
   
   $( "#yourtoggle" ).click( function() {
-    $( "#yourturnsection" ).slideToggle();
+    $( "#yourturnsection" ).slideToggle( "fast" );
   });
   
   $( "#theirtoggle" ).click( function() {
-    $( "#theirturnsection" ).slideToggle();
+    $( "#theirturnsection" ).slideToggle( "fast" );
   });
 
   $( "#completedtoggle" ).click( function() {
-    $( "#completedsection" ).slideToggle();
+    $( "#completedsection" ).slideToggle( "fast" );
   });
 
   $( "#archivetoggle" ).click( function() {
-    $( "#archivesection" ).slideToggle();
+    $( "#archivesection" ).slideToggle( "fast" );
+  });
+
+  $( "#boardtoggle" ).click( function() {
+    $( "#boardsection" ).slideToggle( "fast" );
+  });
+
+  $( "#chattoggle" ).click( function() {
+    $( "#chatsection" ).slideToggle( "fast" );
   });
 });
