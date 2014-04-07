@@ -234,7 +234,7 @@ sub show_game_list {
   
   say $q->h2( $q->span( { class => 'clickable', id => 'completedtoggle' },
                         $q->img( { src => 'expand.png', alt => '[+]' } ),
-                        'Completed Games ('.scalar( @complete ).')',
+                        'Recently Completed Games ('.scalar( @complete ).')',
                       ) );
   
   say $q->start_div( { class => 'togglable', id => 'completedsection' } );
@@ -400,7 +400,6 @@ sub show_game_details {
   }
   else {
     $game = $wf->get_game( $id );
-    $wf->{log}->debug( "get_game response:" . Dumper( $wf->{res} ) );
     set_my_player( $game );
     set_player_info( $game );
   }
@@ -643,9 +642,6 @@ sub print_game_link {
   my $me = $game->{my_player};
   my $dist = $wf->set_distribution( $game );
   
-  $wf->{log}->debug( "say game link response:" . Dumper( $game ) );
-
-  
   $q->delete_all();
   my $game_link = $q->start_form(
     -name => $id,
@@ -748,7 +744,8 @@ sub print_tiles {
       $count++;
       my $print_tile = $tile;
       utf8::encode( $print_tile );
-      say $q->start_td( { class => 'rack' } ), $print_tile;
+      say $q->start_td( { class => 'rack' } );
+      print $print_tile;
       if ( $tile ne '?' ) {
         say $q->Sub( { class => 'score' }, $wf->{dist}->{points}->{$tile} );
       }
@@ -1092,7 +1089,7 @@ sub db_get_game_count {
 sub db_get_games {
   my ( $uid, $limit, $offset ) = @_;
   
-  my $sql = 'select id, game_data from games where user_id = ? limit ?, ?';
+  my $sql = 'select id, game_data from games where user_id = ? order by id desc limit ?, ?';
   my @bv = ( $uid, $offset, $limit );
   $wf->{log}->info( 'db_get_games executing: '.$sql.' [ '.join( ',', @bv ).' ]' );
   my $sth = $wf->{dbh}->prepare( $sql );
