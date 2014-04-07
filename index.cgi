@@ -195,14 +195,16 @@ sub show_game_list {
 
   say $q->hr();
   say $q->h2( 'Running Games (' .( scalar( @running_your_turn ) + scalar( @running_their_turn ) ).')' );
-    
-  say $q->h3( $q->span( { class => 'clickable', id => 'yourtoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+]' } ),
-                        ' Your Turn ('.scalar( @running_your_turn ).')',
-                      ) );
   
-  say $q->start_div( { class => 'togglable', id => 'yourturnsection' } );
-  say $q->start_ul();
+  say $q->start_div( { id => 'yourturncontainer' } );
+  
+  say $q->div( { id => 'yourturntoggle', class => 'toggleswitch' },
+               $q->h3( $q->img( { src => 'expand.png', alt => '[+]' } ),
+                       'Your Turn ('.scalar( @running_your_turn ).')',
+                     )
+             );
+  
+  say $q->start_ul( { id => 'yourturnsection', class => 'togglable' } );
   if ( scalar @running_your_turn ) {
     foreach my $game ( @running_your_turn ) {
       print_game_link( $game );
@@ -212,15 +214,18 @@ sub show_game_list {
     say $q->li( $q->em( 'No games to show' ) );
   }
   say $q->end_ul();
-  say $q->end_div();
-  
-  say $q->h3( $q->span( { class => 'clickable', id => 'theirtoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+]' } ),
-                        " Opponent's Turn (".scalar( @running_their_turn ).')',
-                      ) );
 
-  say $q->start_div( { class => 'togglable', id => 'theirturnsection' } );
-  say $q->start_ul();
+  say $q->end_div(); # yourturncontainer
+  
+  say $q->start_div( { id => 'theirturncontainer' } );
+  
+  say $q->div( { id => 'theirturntoggle', class => 'toggleswitch' },
+               $q->h3( $q->img( { src => 'expand.png', alt => '[+]' } ),
+                       "Opponent's Turn (".scalar( @running_their_turn ).')',
+                     )
+             );
+
+  say $q->start_ul( { id => 'theirturnsection', class => 'togglable' } );
   if ( scalar @running_their_turn ) {
     foreach my $game ( @running_their_turn ) {
       print_game_link( $game );
@@ -229,17 +234,19 @@ sub show_game_list {
   else {
     say $q->li( $q->em( 'No games to show' ) );
   }
-  say $q->end_ul();
-  say $q->end_div();
+  say $q->end_ul();  
+  say $q->end_div(); # theirturncontainer
   
-  say $q->h2( $q->span( { class => 'clickable', id => 'completedtoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+]' } ),
-                        'Recently Completed Games ('.scalar( @complete ).')',
-                      ) );
-  
-  say $q->start_div( { class => 'togglable', id => 'completedsection' } );
+  say $q->start_div( { id => 'completedcontainer' } );
 
-  say $q->start_ul();
+  say $q->div( { id => 'completedtoggle', class => 'toggleswitch' },
+               $q->h2( $q->img( { src => 'expand.png', alt => '[+]' } ),
+                       'Recently Completed Games ('.scalar( @complete ).')',
+                      )
+             );  
+    
+
+  say $q->start_ul( { id => 'completedsection', class => 'togglable' } );
   if ( scalar @complete ) {
     foreach my $game ( @complete ) {
       print_game_link( $game );
@@ -250,15 +257,18 @@ sub show_game_list {
     say $q->li( $q->em( 'No games to show' ) );
   }
   say $q->end_ul();
-  say $q->end_div();
+  say $q->end_div(); # completedcontainer
   
-  say $q->h2( $q->span( { class => 'clickable', id => 'archivetoggle' },
-                          $q->img( { src => 'expand.png', alt => '[+]' } ),
-                          'Archived Games',
-                      ) );
+  say $q->start_div( { id => 'archivecontainer' } );
   
-  say $q->start_div( { class => 'togglable', id => 'archivesection' } );
-
+  say $q->div( { id => 'archivetoggle', class => 'toggleswitch' },
+               $q->h2( $q->img( { src => 'expand.png', alt => '[+]' } ),
+                       'Archived Games',
+                     ),
+             );
+  
+  say $q->start_div( { id => 'archivesection', class => 'togglable' } );
+  
   say $q->p( 'This section will show you all old games which have at some time been seen',
              'in the "Completed Games" section above.' );
   
@@ -270,9 +280,15 @@ sub show_game_list {
   say $q->start_ul(), $q->start_li();
   
   #say $q->h4( 'Currently undergoing maintenance.  Newly finished games will still be recorded.' );
-  print_navigate_button( 'show_archive_list', 'View archive', { uid => $uid, token => sha1_hex( $uid . $uid ), page => 1 } );
+  print_navigate_button( 'show_archive_list',
+                         'View archive',
+                         { uid => $uid, token => sha1_hex( $uid . $uid ), page => 1 }
+                       );
+  
   say $q->end_li(), $q->end_ul();
-  say $q->end_div();
+  
+  say $q->end_div(); # archivesection
+  say $q->end_div(); # archivecontainer
 }
 
 #-------------------------------------------------------------------------------
@@ -821,11 +837,6 @@ sub print_board_and_last_move {
     [ qw( tl e e e tw e e dl e e tw e e e tl ) ],
   );
   
-  say $q->h4( $q->span( { class => 'clickable', id => 'boardtoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+]' } ),
-                        'Board:'
-                      ) );
-  
   my $table_html = "<table class='board'>\n";
   foreach my $r ( 0..14 ) {
     $table_html .= "<tr>\n";
@@ -864,12 +875,21 @@ sub print_board_and_last_move {
   }
   $table_html .= "</table>\n";
   
-  say $q->start_div( { class => 'togglable', id => 'boardsection' } );
+  say $q->start_div( { id => 'boardcontainer' } );
+  
+  say $q->div( { id => 'boardtoggle', class => 'toggleswitch' },
+               $q->h4( $q->img( { src => 'expand.png', alt => '[+]' } ),
+                       'Board:',
+                     ),
+             );
+  
+  say $q->start_div( { id => 'boardsection', class => 'togglable' } );
   
   print_last_move( $game );
   say $q->p( $table_html );
   
-  say $q->end_div();
+  say $q->end_div(); # boardsection
+  say $q->end_div(); # boardcontainer
 }
 
 #-------------------------------------------------------------------------------
@@ -915,7 +935,6 @@ sub print_chat {
   
   my @chat = ();
   
-
   if ( ! $game->{from_db} ) {
     my @raw_chat = $wf->get_chat_messages( $game->{id} );
     foreach my $msg ( @{$raw_chat[0]} ) {
@@ -928,12 +947,15 @@ sub print_chat {
     }
   }
   
-  say $q->h4( $q->span( { class => 'clickable', id => 'chattoggle' },
-                        $q->img( { src => 'expand.png', alt => '[+]' } ),
-                        'Chat messages ('.scalar( @chat ).'):'
-                      ) );
+  say $q->start_div( { id => 'chatcontainer' } );
   
-  say $q->start_p( { class => 'chat togglable', id => 'chatsection' } );
+  say $q->div( { id => 'chattoggle', class => 'toggleswitch' },
+               $q->h4( $q->img( { src => 'expand.png', alt => '[+]' } ),
+                       'Chat messages ('.scalar( @chat ).'):',
+                     ),
+             );
+  
+  say $q->start_p( { id => 'chatsection' , class => 'chat togglable' } );
   
   if ( $game->{from_db} ) {
     say 'Chat messages are not available for archived games';
@@ -946,6 +968,8 @@ sub print_chat {
   }
   
   say $q->end_p();
+  
+  say $q->end_div(); # chatcontainer
 }
 
 #-------------------------------------------------------------------------------

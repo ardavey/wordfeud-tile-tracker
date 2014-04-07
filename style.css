@@ -72,7 +72,7 @@ sub.score, sup.score {
   font-size: 6pt !important;
 }
 
-.clickable {
+.toggleswitch {
   cursor: pointer;
 }
 
