@@ -346,7 +346,7 @@ sub show_archive_list {
   say $q->start_ul();
   if ( $games && validate_token( $token, $uid, $sample_game ) ) {
     foreach my $gid ( sort { $b <=> $a } @gids ) {
-      print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token );
+      print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token, $page );
     }
   }
   else {
@@ -393,6 +393,8 @@ sub show_game_details {
   my $id = $q->param( 'gid' );
   my $raw_game = $q->param( 'raw_game' );
   my $token = $q->param( 'token' );
+  my $page = $q->param( 'page' );
+  $page ||= 1;
   my $game;
   
   if ( $raw_game ) {
@@ -412,7 +414,14 @@ sub show_game_details {
               . ' vs ' . ${$game->{players}}[1 - $me]->{username} . ')' );
 
   if ( $game->{from_db} ) {
-    print_navigate_button( 'show_archive_list', 'Archive list', { uid => $game->{players}[$me]->{id}, token => $token } );
+    print_navigate_button(
+                           'show_archive_list',
+                           'Archive list',
+                           { uid => $game->{players}[$me]->{id},
+                             token => $token,
+                             page => $page,
+                           }
+                         );
     say $q->hr();    
   }
   else {
@@ -636,7 +645,7 @@ sub print_navigate_button {
 #-------------------------------------------------------------------------------
 # Prints the HTML to show a game on the game list page
 sub print_game_link {
-  my ( $game, $raw_game, $token ) = @_;
+  my ( $game, $raw_game, $token, $page ) = @_;
   
   my $id = $game->{id};
   my $me = $game->{my_player};
@@ -673,6 +682,12 @@ sub print_game_link {
     );  
   }
   
+  if ( $page ) {
+    $game_link .= $q->hidden(
+      -name => 'page',
+      -value => $page,
+    );  
+  }
   
   $game_link .= $q->submit(
     -name => 'submit_form',
