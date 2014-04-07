@@ -566,9 +566,17 @@ sub print_page_header {
   say $q->h1( 'Wordfeud Tile Tracker' );  
 
   # Facebook "Like" button
-  say '<div id="fb-root"></div>';
-  say '<div class="fb-like" data-href="https://www.facebook.com/wordfeudtiletracker" data-width="350" data-colorscheme="dark" data-show-faces="false"></div>'
-
+  say $q->start_div( { 'id' => 'fb-root' } ), $q->end_div();
+  say $q->start_div( {
+                 'class' => 'fb-like',
+                 'data-href' => 'https://www.facebook.com/wordfeudtiletracker',
+                 'data-layout' => 'standard',
+                 'data-colorscheme' => 'dark',
+                 'data-action' => 'like',
+                 'data-showfaces' => 'false',
+                 'data-share' => 'true',
+               } ), $q->end_div();
+  
 }
 
 #-------------------------------------------------------------------------------
