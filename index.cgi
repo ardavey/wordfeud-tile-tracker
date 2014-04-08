@@ -566,8 +566,8 @@ sub print_page_header {
   say $q->h1( 'Wordfeud Tile Tracker' );  
 
   # Facebook "Like" button
-  say $q->start_div( { 'id' => 'fb-root' } ), $q->end_div();
-  say $q->start_div( {
+  say $q->div( { 'id' => 'fb-root' }, '' );
+  say $q->div( {
                  'class' => 'fb-like',
                  'data-href' => 'https://www.facebook.com/wordfeudtiletracker',
                  'data-layout' => 'standard',
@@ -575,7 +575,7 @@ sub print_page_header {
                  'data-action' => 'like',
                  'data-showfaces' => 'false',
                  'data-share' => 'true',
-               } ), $q->end_div();
+                }, '' );
   
 }
 
