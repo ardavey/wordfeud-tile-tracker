@@ -70,7 +70,6 @@ sub login_form {
   say $q->hr();
   say $q->p( 'Welcome!  This is a simple Wordfeud tile counter which will allow',
                'you to view the remaining tiles on any of your current Wordfeud games.' );
-  say $q->p( 'The site is under active development, and will change and evolve with no notice.' );
   say $q->p( 'Please enter your Wordfeud credentials to load your games.  These details',
                'are only used to talk to the game server - they are not stored by ardavey.com.' );
   
@@ -106,12 +105,7 @@ sub login_form {
   );
   say $q->end_form;
 
-  say $q->p( 'I will try my best not to break the site so that you can continue to',
-               'use it, but it is of course presented without any guarantees.' );
-  say $q->p( 'If you visit the site at some time and the colours/layout look weird,',
-               'try a full refresh (Shift-Refresh or Ctrl-Refresh, depending on your',
-               'browser) to reload the stylesheet.' );
-  say $q->p( 'Finally, please report any issues or request features using the feedback',
+  say $q->p( 'Finally, please report any issues or raise request features using the feedback',
                'link below. Development of this site is driven equally by things I want',
                'to do and things the community would like!' );
 }
@@ -560,22 +554,24 @@ sub print_page_header {
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
   );
 
-  say '<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>';
-  say "<script src=\"wordfeudtiletracker.js?v=$$\"></script>";
+  say qq{ <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script> };
+  say qq{ <script src="wordfeudtiletracker.js?v=$$"></script> };
 
   say $q->h1( 'Wordfeud Tile Tracker' );  
 
   # Facebook "Like" button
-  say $q->div( { 'id' => 'fb-root' }, '' );
-  say $q->div( {
-                 'class' => 'fb-like',
-                 'data-href' => 'https://www.facebook.com/wordfeudtiletracker',
-                 'data-layout' => 'standard',
-                 'data-colorscheme' => 'dark',
-                 'data-action' => 'like',
-                 'data-showfaces' => 'false',
-                 'data-share' => 'true',
-                }, '' );
+  #say $q->start_div( { 'width' => '100%' } );
+  #say $q->div( { 'id' => 'fb-root' }, '' );
+  #say $q->div( {
+  #               'class' => 'fb-like',
+  #               'data-href' => 'https://www.facebook.com/wordfeudtiletracker',
+  #               'data-layout' => 'standard',
+  #               'data-colorscheme' => 'dark',
+  #               'data-action' => 'like',
+  #               'data-showfaces' => 'false',
+  #               'data-share' => 'true',
+  #              }, '' );
+  #say $q->end_div();
   
 }
 
