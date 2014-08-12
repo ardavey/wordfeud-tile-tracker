@@ -11,7 +11,7 @@ use strict;
 use lib qw( /home/ardavey/perlmods );
 use utf8;
 
-use 5.0100;
+use 5.010;
 
 use Wordfeud;
 use CGI qw( -nosticky );
