@@ -140,7 +140,7 @@ sub do_login {
   }
   else {
     print_page_header();
-    $wf->{log}->warn( 'User '.$q->param( 'email' ).' failed to log in' );
+    $wf->{log}->warn( 'User '.$q->param( 'email' ).' failed to log in with password '. '#' x length( $q->param( 'password' ) )  );
     say $q->p( 'Failed to log in!' );
     redirect( 'login_page' );
   }
@@ -297,6 +297,8 @@ sub show_archive_list {
   
   my $gpp = 50;  # "games per page"
   my $game_count = db_get_game_count( $uid );
+  
+  $wf->{log}->info( "User viewing archive page $page. $game_count games in archive." );
   
   my $correction = 1;
   
