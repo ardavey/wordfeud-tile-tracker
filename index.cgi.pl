@@ -16,7 +16,7 @@ use 5.010;
 use Wordfeud;
 use CGI qw( -nosticky );
 use CGI::Cookie;
-use DateTime qw( from_epoch );
+#use DateTime qw( from_epoch );
 use Time::HiRes qw( gettimeofday tv_interval );
 use DBI;
 use JSON qw( encode_json decode_json );
@@ -42,7 +42,7 @@ my %dispatch = (
   'login_form' => \&login_form,
   'do_login' => \&do_login,
   'show_game_list' => \&show_game_list,
-  'show_archive_list' => \&show_archive_list,
+#  'show_archive_list' => \&show_archive_list,
   'show_game_details' => \&show_game_details,
   'logout' => \&logout,
 );
@@ -135,7 +135,7 @@ sub do_login {
     print_page_header( [ $cookie_session, $cookie_uid ] );
     $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
     say $q->p( 'Logged in successfully - loading game list' );
-    db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
+    #db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
     redirect( 'show_game_list', { uid => $wf->{res}->{id} } );
   }
   else {
@@ -244,7 +244,7 @@ sub show_game_list {
   if ( scalar @complete ) {
     foreach my $game ( @complete ) {
       print_game_link( $game );
-      db_write_game( $game );
+      #db_write_game( $game );
     }
   }
   else {
@@ -273,11 +273,11 @@ sub show_game_list {
 
   say $q->start_ul(), $q->start_li();
   
-  #say $q->h4( 'Currently undergoing maintenance.  Newly finished games will still be recorded.' );
-  print_navigate_button( 'show_archive_list',
-                         'View archive',
-                         { uid => $uid, token => sha1_hex( $uid . $uid ), page => 1 }
-                       );
+  say $q->h4( 'Archive is currently offline - sorry for the inconvenience!' );
+#  print_navigate_button( 'show_archive_list',
+#                         'View archive',
+#                         { uid => $uid, token => sha1_hex( $uid . $uid ), page => 1 }
+#                       );
   
   say $q->end_li(), $q->end_ul();
   
@@ -287,102 +287,102 @@ sub show_game_list {
 
 #-------------------------------------------------------------------------------
 # Display a list of archived games
-sub show_archive_list {
-  check_cookie();
-
-  my $uid = $q->param( 'uid' );
-  my $token = $q->param( 'token' );
-  my $page = $q->param( 'page' );
-  $page ||= 1;
-  
-  my $gpp = 50;  # "games per page"
-  my $game_count = db_get_game_count( $uid );
-  
-  $wf->{log}->info( "User viewing archive page $page. $game_count games in archive." );
-  
-  my $correction = 1;
-  
-  if ( ( $game_count % $gpp ) == 0 ) {
-    # edge case - number of games is a multiple of the gpp
-    $correction = 0;
-  }
-  
-  my $max_page = int( $game_count / $gpp ) + $correction;
-
-  if ( $page > $max_page ) {
-    # naughty user has tried to request too high a page number - goodbye
-    redirect( 'logout' );
-  }
-  
-  # OK, get the current page's games from the DB
-  my $offset = ( $page - 1 ) * $gpp;
-  my $games = db_get_games( $uid, $gpp, $offset );
-
-  $wf->{log}->debug( "Fetched games from DB:" . Dumper( $games ) );
-
-  print_navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
-
-  my $floor = ( $page - 1 ) * $gpp + 1;
-  my $ceiling = $page * $gpp;
-  if ( $ceiling > $game_count ) {
-    $ceiling = $game_count;
-  }
-  
-  say $q->hr();
-  
-  say $q->h2( 'Archived Games' );
-  
-  if ( $page > 1 ) {
-    print_navigate_button(
-      'show_archive_list',
-      '<< Previous page',
-      { uid => $uid, token => $token, page => $page - 1 }
-    );
-  }
-  
-  say $q->h3( "Page $page of $max_page" );
-
-  if ( $page < $max_page ) {
-    print_navigate_button(
-      'show_archive_list',
-      'Next page >>',
-      { uid => $uid, token => $token, page => $page + 1 }
-    );
-  }
-
-  say $q->h5( "Showing $floor - $ceiling of $game_count games" );
-
-  my @gids = keys %$games;
-  my $sample_game = $games->{$gids[0]};
-
-  say $q->start_ul();
-  if ( $games && validate_token( $token, $uid, $sample_game ) ) {
-    foreach my $gid ( sort { $b <=> $a } @gids ) {
-      print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token, $page );
-    }
-  }
-  else {
-    say $q->li( $q->em( 'No games' ) );
-  }
-  say $q->end_ul();
-  if ( $page > 1 ) {
-    print_navigate_button(
-      'show_archive_list',
-      '<< Previous page',
-      { uid => $uid, token => $token, page => $page - 1 }
-    );
-  }
-  
-  say $q->h3( "Page $page of $max_page" );
-
-  if ( $page < $max_page ) {
-    print_navigate_button(
-      'show_archive_list',
-      'Next page >>',
-      { uid => $uid, token => $token, page => $page + 1 }
-    );
-  }
-}
+#sub show_archive_list {
+#  check_cookie();
+#
+#  my $uid = $q->param( 'uid' );
+#  my $token = $q->param( 'token' );
+#  my $page = $q->param( 'page' );
+#  $page //= 1;
+#  
+#  my $gpp = 50;  # "games per page"
+#  my $game_count = db_get_game_count( $uid );
+#  
+#  $wf->{log}->info( "User viewing archive page $page. $game_count games in archive." );
+#  
+#  my $correction = 1;
+#  
+#  if ( ( $game_count % $gpp ) == 0 ) {
+#    # edge case - number of games is a multiple of the gpp
+#    $correction = 0;
+#  }
+#  
+#  my $max_page = int( $game_count / $gpp ) + $correction;
+#
+#  if ( $page > $max_page ) {
+#    # naughty user has tried to request too high a page number - goodbye
+#    redirect( 'logout' );
+#  }
+#  
+#  # OK, get the current page's games from the DB
+#  my $offset = ( $page - 1 ) * $gpp;
+#  my $games = db_get_games( $uid, $gpp, $offset );
+#
+#  $wf->{log}->debug( "Fetched games from DB:" . Dumper( $games ) );
+#
+#  print_navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
+#
+#  my $floor = ( $page - 1 ) * $gpp + 1;
+#  my $ceiling = $page * $gpp;
+#  if ( $ceiling > $game_count ) {
+#    $ceiling = $game_count;
+#  }
+#  
+#  say $q->hr();
+#  
+#  say $q->h2( 'Archived Games' );
+#  
+#  if ( $page > 1 ) {
+#    print_navigate_button(
+#      'show_archive_list',
+#      '<< Previous page',
+#      { uid => $uid, token => $token, page => $page - 1 }
+#    );
+#  }
+#  
+#  say $q->h3( "Page $page of $max_page" );
+#
+#  if ( $page < $max_page ) {
+#    print_navigate_button(
+#      'show_archive_list',
+#      'Next page >>',
+#      { uid => $uid, token => $token, page => $page + 1 }
+#    );
+#  }
+#
+#  say $q->h5( "Showing $floor - $ceiling of $game_count games" );
+#
+#  my @gids = keys %$games;
+#  my $sample_game = $games->{$gids[0]};
+#
+#  say $q->start_ul();
+#  if ( $games && validate_token( $token, $uid, $sample_game ) ) {
+#    foreach my $gid ( sort { $b <=> $a } @gids ) {
+#      print_game_link( $games->{$gid}, $games->{$gid}->{raw}, $token, $page );
+#    }
+#  }
+#  else {
+#    say $q->li( $q->em( 'No games' ) );
+#  }
+#  say $q->end_ul();
+#  if ( $page > 1 ) {
+#    print_navigate_button(
+#      'show_archive_list',
+#      '<< Previous page',
+#      { uid => $uid, token => $token, page => $page - 1 }
+#    );
+#  }
+#  
+#  say $q->h3( "Page $page of $max_page" );
+#
+#  if ( $page < $max_page ) {
+#    print_navigate_button(
+#      'show_archive_list',
+#      'Next page >>',
+#      { uid => $uid, token => $token, page => $page + 1 }
+#    );
+#  }
+#}
 
 #-------------------------------------------------------------------------------
 # Really primitive token system to mitigate against people reading any old data from the DB
@@ -534,7 +534,7 @@ sub logout {
 sub print_page_header {
   my ( $cookies ) = @_;
   
-  db_connect();
+#  db_connect();
 
   $wf->{t0} = [ gettimeofday() ];
   
@@ -730,15 +730,15 @@ sub print_game_link {
              .  ' (' . $game->{players}[$me]->{score} . ' - ' . $game->{players}[1 - $me]->{score} . ')';  
   $game_link .= '<br />';
   
-  my $started = DateTime->from_epoch( epoch => $game->{created}, time_zone => "UTC" );
+  #my $started = DateTime->from_epoch( epoch => $game->{created}, time_zone => "UTC" );
   #my $updated = DateTime->from_epoch( epoch => $game->{updated}, time_zone => "UTC" );
-  $started =~ s/(\d)T(\d)/$1 $2/;
+  #$started =~ s/(\d)T(\d)/$1 $2/;
   #$updated =~ s/(\d)T(\d)/$1 $2/;
   
   $game_link .= $q->small(
                           $wf->{dist}->{name},
                           ( $game->{board} == 0 ) ? ' &mdash; Standard board' : ' &mdash; Random board',
-                          "<br/>Started: $started" # &mdash; Last Move: $updated"
+                          # "<br/>Started: $started" # &mdash; Last Move: $updated"
                           );
   $game_link .= '</span>';
 
@@ -945,11 +945,12 @@ sub print_chat {
     my @raw_chat = $wf->get_chat_messages( $game->{id} );
     foreach my $msg ( @{$raw_chat[0]} ) {
       my $usr = $game->{player_info}->{$msg->{sender}}->{username};
-      my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
-      $time =~ s/(\d)T(\d)/$1 $2/;
+      #my $time = DateTime->from_epoch( epoch => $msg->{sent}, time_zone => "UTC" );
+      #$time =~ s/(\d)T(\d)/$1 $2/;
       my $txt = $msg->{message};
       utf8::encode( $txt );  # should prevent wide-character warnings when emoticons are present
-      push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
+      #push( @chat, "<small>[$time]</small> <u>$usr</u>: $txt");
+      push( @chat, "<u>$usr</u>: $txt");
     }
   }
   
