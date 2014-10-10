@@ -8,7 +8,10 @@
 # Copyright 2013 Andrew Davey
 
 use strict;
-use lib qw( /home/ardavey/perlmods );
+use lib qw( 
+  /home/ardavey/perlmods
+  /home/ardavey/perl5/lib/perl5
+);
 use utf8;
 
 use 5.010;
