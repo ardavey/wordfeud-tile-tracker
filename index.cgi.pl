@@ -508,7 +508,9 @@ sub show_game_details {
     }
   }
   
-  say $q->h5( 'Language: '.$wf->{dist}->{name} );
+  my $print_lang = $wf->{dist}->{name};
+  utf8::encode( $print_lang );
+  say $q->h5( 'Language: '.$print_lang );
 
   print_tiles( \@rack, 'Your rack:' );
   print_tiles( \@remaining, "Opponent's rack:" );  
@@ -738,8 +740,11 @@ sub print_game_link {
   $started =~ s/(\d)T(\d)/$1 $2/;
   #$updated =~ s/(\d)T(\d)/$1 $2/;
   
+  my $print_lang = $wf->{dist}->{name};
+  utf8::encode( $print_lang );
+  
   $game_link .= $q->small(
-                          $wf->{dist}->{name},
+                          $print_lang,
                           ( $game->{board} == 0 ) ? ' &mdash; Standard board' : ' &mdash; Random board',
                           "<br/>Started: $started" # &mdash; Last Move: $updated"
                           );
