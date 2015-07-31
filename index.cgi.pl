@@ -562,7 +562,7 @@ sub print_page_header {
   );
 
   say qq{ <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script> };
-  say qq{ <script src="wordfeudtiletracker.js?v=$$"></script> };
+  say qq{ <script src="wordfeudtiletracker.js?p=$$"></script> };
 
   say $q->h1( 'Wordfeud Tile Tracker' );  
 
@@ -899,11 +899,26 @@ sub print_board_and_last_move {
   
   say $q->start_div( { id => 'boardsection', class => 'togglable' } );
   
-  print_last_move( $game );
+  print_scores( $game );
   say $q->p( $table_html );
+  print_last_move( $game );
   
   say $q->end_div(); # boardsection
   say $q->end_div(); # boardcontainer
+}
+
+#-------------------------------------------------------------------------------
+# Print names/scores next to the board
+sub print_scores {
+  my ( $game ) = @_;
+  my @out;
+  
+  my $me = $game->{my_player};
+  foreach my $p ( $me, 1 - $me ) {
+    push @out, ${$game->{players}}[$p]->{username} . ' (' . ${$game->{players}}[$p]->{score} . ')';
+  }
+  
+  say $q->h2( join( ' vs ', @out ) );
 }
 
 #-------------------------------------------------------------------------------
@@ -1079,7 +1094,7 @@ sub hit_counter {
     $rewrite_hits = 0;
   }
   
-  say $q->p( $q->small( '&#169; ardavey 2013-14<br/>' . $hits . ' page views' ) );
+  say $q->p( $q->small( '&#169; Andrew Davey<br/>' . $hits . ' page views' ) );
   
   if ( $rewrite_hits ) {
     # attempt to write the new hitcounter value to file
