@@ -26,6 +26,7 @@ use JSON qw( encode_json decode_json );
 use Compress::Zlib;
 use MIME::Base64;
 use Digest::SHA1 qw( sha1_hex );
+use Config::Simple;
 
 use Log::Log4perl qw( get_logger );
 use Data::Dumper;
@@ -126,13 +127,13 @@ sub do_login {
     my $cookie_session = CGI::Cookie->new(
         -name => 'sessionID',
         -value => $wf->get_session_id(),
-        -expires => '+2d',
+        -expires => '+3d',
     );
 
     my $cookie_uid = CGI::Cookie->new(
         -name => 'uid',
         -value => $wf->{res}->{id},
-        -expires => '+2d',
+        -expires => '+3d',
     );
     
     print_page_header( [ $cookie_session, $cookie_uid ] );
@@ -1114,14 +1115,13 @@ sub hit_counter {
 # Does what it says on the tin...
 sub db_connect {
   $wf->{log}->debug( 'Connecting to DB' );
-  # SQLite will do for now - the site's relatively low volume
-  my $dsn = 'dbi:SQLite:dbname=/home/ardavey/db/wordfeudtracker.db';
-  my $user = undef;
-  my $pass = undef;
+  my $c = new Config::Simple( '/home/ardavey/conf/wordfeud.conf' ) or die 'Failed to load config';
+  my $creds = $c->param( -block => 'AUTHENTICATION' );
+  my $dsn = 'DBI:mysql:database=ardavey_wordfeud;host=db.ardavey.com';
+  my $user = $creds->{user};
+  my $pass = $creds->{pass};
   my $opts = {
-    AutoCommit => 1,
     RaiseError => 1,
-    sqlite_see_if_its_a_number => 1,
   };
   $wf->{dbh} = DBI->connect( $dsn, $user, $pass, $opts );
 }
@@ -1143,7 +1143,7 @@ sub db_record_user {
 sub db_get_game_count {
   my ( $uid ) = @_;
   
-  my $q = 'select count() from games where user_id = ?';
+  my $q = 'select count(*) from games where user_id = ?';
   my $sth = $wf->{dbh}->prepare( $q );
   $sth->execute( $uid );
   
