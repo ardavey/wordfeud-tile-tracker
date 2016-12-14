@@ -552,35 +552,19 @@ sub print_page_header {
     $headers{ '-cookie' } = $cookies;
   }
   say $q->header( %headers );
-  
+
   $q->default_dtd( '-//WAPFORUM//DTD XHTML Mobile 1.2//EN http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd' );
   
   say $q->start_html(
     -dtd => 1,
     -title => 'Wordfeud Tile Tracker',
-    -style => { 'src' => "style.css?v=$$" },
+    -style => { -src => "style.css?v=$$" },
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
+    -script => [ { -type => 'javascript', -src => 'http://code.jquery.com/jquery-1.11.0.min.js' },
+                 { -type => 'javascript', -src => "wordfeudtiletracker.js?p=$$" }, ]
   );
-
-  say qq{ <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script> };
-  say qq{ <script src="wordfeudtiletracker.js?p=$$"></script> };
-
-  say $q->h1( 'Wordfeud Tile Tracker' );  
-
-  # Facebook "Like" button
-  #say $q->start_div( { 'width' => '100%' } );
-  #say $q->div( { 'id' => 'fb-root' }, '' );
-  #say $q->div( {
-  #               'class' => 'fb-like',
-  #               'data-href' => 'https://www.facebook.com/wordfeudtiletracker',
-  #               'data-layout' => 'standard',
-  #               'data-colorscheme' => 'dark',
-  #               'data-action' => 'like',
-  #               'data-showfaces' => 'false',
-  #               'data-share' => 'true',
-  #              }, '' );
-  #say $q->end_div();
   
+  say $q->h1( 'Wordfeud Tile Tracker' );  
 }
 
 #-------------------------------------------------------------------------------
@@ -1049,18 +1033,35 @@ sub get_avatar_url {
 sub print_page_footer {
   say $q->hr();
   
-  if ( $action ne 'login_form' ) {
-    print_navigate_button( 'logout', 'Log out' );
-  }
-
-  say $q->p( 'You can leave feedback/comments/suggestions via the',
-             $q->a( { href => 'http://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ) . '.'
+  # Facebook "Like" button
+  say $q->p(
+    $q->start_div( { 'width' => '100%' } ),
+    $q->div( { 'id' => 'fb-root' }, '' ),
+    $q->div( {
+               'class' => 'fb-like',
+               'data-href' => 'https://www.facebook.com/wordfeudtiletracker',
+               'data-layout' => 'standard',
+               'data-colorscheme' => 'dark',
+               'data-action' => 'like',
+               'data-showfaces' => 'false',
+               'data-share' => 'false',
+               'data-size' => 'large',
+              }, '' ),
+    $q->end_div(),
+  );
+  say $q->p( 'Please like and leave us feedback/comments/suggestions via the',
+             $q->a( { href => 'https://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ) . '.'
            );
 
   hit_counter();
 
   say $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
-  say $q->p( $q->small( 'Timestamps are presented in UTC.<br/>The site is provided free of charge with no guarantees.' ) );
+  say $q->p( $q->small( 'Timestamps are all in GMT.<br/>The site is provided free of charge with no guarantees of making you a better player.' ) );
+
+  if ( $action ne 'login_form' ) {
+    print_navigate_button( 'logout', 'Log out' );
+  }
+
   say $q->end_html();
   
   if ( $wf->{dbh} ) {
@@ -1079,7 +1080,6 @@ sub hit_counter {
     open HITREAD, "< wf_hits" or $wf->{log}->error( "Unable to open counter file for read: $!" );
     $hits = <HITREAD>;
     close HITREAD;
-    chomp $hits;
   }
   else {
     $wf->{log}->error( 'Can not find counter file' );
@@ -1100,7 +1100,7 @@ sub hit_counter {
   if ( $rewrite_hits ) {
     # attempt to write the new hitcounter value to file
     open HITWRITE, "> wf_hits" or $wf->{log}->error( "Unable to open counter file for write: $!" );
-    say HITWRITE $hits;
+    print HITWRITE $hits;
     close HITWRITE;
   }
   
