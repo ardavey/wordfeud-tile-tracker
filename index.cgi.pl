@@ -27,6 +27,8 @@ use Compress::Zlib;
 use MIME::Base64;
 use Digest::SHA1 qw( sha1_hex );
 use Config::Simple;
+use LWP::Simple;
+use File::Slurp;
 
 use Log::Log4perl qw( get_logger );
 use Data::Dumper;
@@ -170,6 +172,7 @@ sub show_game_list {
   
   $wf->{log}->info( 'show_game_list: found details for ' . scalar @$games . ' games' );
   foreach my $game ( @$games ) {
+    #say "<!--\n" . Dumper( $game ) . "\n-->";
     set_my_player( $game );
     if ( $game->{is_running} ) {
       if ( $game->{current_player} == $game->{my_player} ) {
@@ -409,8 +412,8 @@ sub show_game_details {
   my $id = $q->param( 'gid' );
   my $raw_game = $q->param( 'raw_game' );
   my $token = $q->param( 'token' );
-  my $page = $q->param( 'page' );
-  $page ||= 1;
+  my $page = $q->param( 'page' ) // 1;
+  
   my $game;
   
   if ( $raw_game ) {
@@ -517,11 +520,13 @@ sub show_game_details {
   print_tiles( \@remaining, "Opponent's rack:" );  
   print_board_and_last_move( \@board, $game );
   print_chat( $game );
+
 }
 
 #-------------------------------------------------------------------------------
 # This just clears the cookie - there's nothing to do server-side.  People like
-# the peace of mind associated with being able to "remove any details" about a site
+# the peace of mind associated with being able to "remove any details"
+# about a site
 sub logout {
   my $cookie = CGI::Cookie->new(
     -name => 'sessionID',
@@ -1024,8 +1029,21 @@ sub set_player_info {
 # Returns the URL for the supplied user's avatar
 sub get_avatar_url {
   my ( $id, $size ) = @_;
+  
+  my $base_url = 'http://avatars.wordfeud.com';
+  
   # Sizes '40', '60' and 'full' are known to work
-  return "http://avatars.wordfeud.com/$size/$id";
+  # 1024 works for newer players
+  
+  if ( $size eq 'full' ) {
+    $size = 1024;
+    my $res = head( "$base_url/$size/$id" );
+    if ( !$res ) {
+      $size = 'full';
+    }
+  }
+  
+  return "$base_url/$size/$id";
 }
 
 #-------------------------------------------------------------------------------
@@ -1076,10 +1094,8 @@ sub hit_counter {
   my $hits;
   
   # 'hits' is a txt file where the first row represents the number of hits
-  if ( -e "./wf_hits" ) {
-    open HITREAD, "< wf_hits" or $wf->{log}->error( "Unable to open counter file for read: $!" );
-    $hits = <HITREAD>;
-    close HITREAD;
+  if ( -e 'wf_hits' ) {
+    $hits = read_file( 'wf_hits' );
   }
   else {
     $wf->{log}->error( 'Can not find counter file' );
@@ -1091,7 +1107,7 @@ sub hit_counter {
     $hits++;
   }
   else {
-    $hits = 'many many';
+    $hits = 'too many';
     $rewrite_hits = 0;
   }
   
@@ -1099,9 +1115,7 @@ sub hit_counter {
   
   if ( $rewrite_hits ) {
     # attempt to write the new hitcounter value to file
-    open HITWRITE, "> wf_hits" or $wf->{log}->error( "Unable to open counter file for write: $!" );
-    print HITWRITE $hits;
-    close HITWRITE;
+    write_file( 'wf_hits', $hits );
   }
   
 }
