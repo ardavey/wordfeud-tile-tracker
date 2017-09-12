@@ -300,7 +300,7 @@ sub show_archive_list {
   my $uid = $q->param( 'uid' );
   my $token = $q->param( 'token' );
   my $page = $q->param( 'page' );
-  $page ||= 1;
+  $page //= 1;
   
   my $gpp = 50;  # "games per page"
   my $game_count = db_get_game_count( $uid );
@@ -321,43 +321,48 @@ sub show_archive_list {
     redirect( 'logout' );
   }
   
-  # OK, get the current page's games from the DB
-  my $offset = ( $page - 1 ) * $gpp;
-  my $games = db_get_games( $uid, $gpp, $offset );
-
-  $wf->{log}->debug( "Fetched games from DB:" . Dumper( $games ) );
-
   print_navigate_button( 'show_game_list', 'Game list', { uid => $uid } );
-
-  my $floor = ( $page - 1 ) * $gpp + 1;
-  my $ceiling = $page * $gpp;
-  if ( $ceiling > $game_count ) {
-    $ceiling = $game_count;
-  }
-  
   say $q->hr();
-  
   say $q->h2( 'Archived Games' );
-  
-  if ( $page > 1 ) {
-    print_navigate_button(
-      'show_archive_list',
-      '<< Previous page',
-      { uid => $uid, token => $token, page => $page - 1 }
-    );
-  }
-  
-  say $q->h3( "Page $page of $max_page" );
 
-  if ( $page < $max_page ) {
-    print_navigate_button(
-      'show_archive_list',
-      'Next page >>',
-      { uid => $uid, token => $token, page => $page + 1 }
-    );
+  # OK, get the current page's games from the DB
+  my $games;
+  
+  if ( $page == 0 ) {
+    $games = db_get_games( $uid );
   }
-
-  say $q->h5( "Showing $floor - $ceiling of $game_count games" );
+  else {
+    my $offset = ( $page - 1 ) * $gpp;
+    $games = db_get_games( $uid, $gpp, $offset );
+  
+    #$wf->{log}->debug( "Fetched games from DB:" . Dumper( $games ) );
+  
+    my $floor = $offset + 1;
+    my $ceiling = $page * $gpp;
+    if ( $ceiling > $game_count ) {
+      $ceiling = $game_count;
+    }
+    
+    if ( $page > 1 ) {
+      print_navigate_button(
+        'show_archive_list',
+        '<< Previous page',
+        { uid => $uid, token => $token, page => $page - 1 }
+      );
+    }
+    
+    say $q->h3( "Page $page of $max_page" );
+  
+    if ( $page < $max_page && $page != 0 ) {
+      print_navigate_button(
+        'show_archive_list',
+        'Next page >>',
+        { uid => $uid, token => $token, page => $page + 1 }
+      );
+    }
+  
+    say $q->h5( "Showing $floor - $ceiling of $game_count games" );
+  }
 
   my @gids = keys %$games;
   my $sample_game = $games->{$gids[0]};
@@ -372,23 +377,33 @@ sub show_archive_list {
     say $q->li( $q->em( 'No games' ) );
   }
   say $q->end_ul();
-  if ( $page > 1 ) {
+  
+  if ( $page != 0 ) {
+    if ( $page > 1 ) {
+      print_navigate_button(
+        'show_archive_list',
+        '<< Previous page',
+        { uid => $uid, token => $token, page => $page - 1 }
+      );
+    }
+    
+    say $q->h3( "Page $page of $max_page" );
+  
+    if ( $page < $max_page ) {
+      print_navigate_button(
+        'show_archive_list',
+        'Next page >>',
+        { uid => $uid, token => $token, page => $page + 1 }
+      );
+    }
+    
     print_navigate_button(
       'show_archive_list',
-      '<< Previous page',
-      { uid => $uid, token => $token, page => $page - 1 }
+      'Show all games (experimental)',
+      { uid => $uid, token => $token, page => 0 }
     );
   }
   
-  say $q->h3( "Page $page of $max_page" );
-
-  if ( $page < $max_page ) {
-    print_navigate_button(
-      'show_archive_list',
-      'Next page >>',
-      { uid => $uid, token => $token, page => $page + 1 }
-    );
-  }
 }
 
 #-------------------------------------------------------------------------------
@@ -569,7 +584,7 @@ sub print_page_header {
                  { -type => 'javascript', -src => "wordfeudtiletracker.js?p=$$" }, ]
   );
   
-  say $q->h1( 'Wordfeud Tile Tracker' );  
+  say $q->h1( 'Wordfeud Tile Tracker' );
 }
 
 #-------------------------------------------------------------------------------
@@ -721,7 +736,7 @@ sub print_game_link {
   }
 
   $game_link .= "<span class='$class'>";
-  $game_link .= ' ' . $game->{players}[$me]->{username} . ' vs ' . $game->{players}[1 - $me]->{username}
+  $game_link .= ' ' . username_or_fb_name( $game->{players}[$me] ) . ' vs ' . username_or_fb_name( $game->{players}[1 - $me] )
              .  ' (' . $game->{players}[$me]->{score} . ' - ' . $game->{players}[1 - $me]->{score} . ')';  
   $game_link .= '<br />';
   
@@ -743,6 +758,11 @@ sub print_game_link {
   $game_link .= $q->end_form();
   
   say $q->li( $game_link );
+}
+
+sub username_or_fb_name {
+  my ( $p ) = @_;
+  return ( $p->{username} =~ m/^_fb_\d+$/ ) ? "<i>$p->{fb_first_name} $p->{fb_last_name}</i>" : "$p->{username}";
 }
 
 #-------------------------------------------------------------------------------
@@ -802,10 +822,17 @@ sub print_tiles {
 sub print_player_info {
   my ( $game, $player ) = @_;
   
+  my $fb_name = '';
+  if ( ${$game->{players}}[$player]->{fb_user_id} ) {
+    $fb_name = ' (' . $q->a( { href => 'http://facebook.com/'.${$game->{players}}[$player]->{fb_user_id} },
+                            "${$game->{players}}[$player]->{fb_first_name} ${$game->{players}}[$player]->{fb_last_name}"
+                          ) . ') ';
+  }  
+
   my $html = '';
   $html .= '<a href="'. get_avatar_url( ${$game->{players}}[$player]->{id}, 'full' ) . '">';
-  $html .= '<img class="av" src="' . get_avatar_url( ${$game->{players}}[$player]->{id}, 40 ) . '" /></a> ';
-  $html .= ${$game->{players}}[$player]->{username} . ' (' . ${$game->{players}}[$player]->{score} . ')';
+  $html .= '<img class="av" src="' . get_avatar_url( ${$game->{players}}[$player]->{id}, 40 ) . '" /></a> ';  
+  $html .= ${$game->{players}}[$player]->{username} . $fb_name . ' (' . ${$game->{players}}[$player]->{score} . ')';
   if ( $game->{current_player} == $player ) {
     $html .= ' &larr;';
   }
@@ -1051,6 +1078,9 @@ sub get_avatar_url {
 sub print_page_footer {
   say $q->hr();
   
+  # Buy me a coffee!
+  say $q->p( $q->a( { href => 'https://ko-fi.com/A30243J1', target => '_blank' }, '<img height="36" style="border:0px;height:36px;" src="https://az743702.vo.msecnd.net/cdn/kofi4.png?v=0" border="0" alt="Buy Me a Coffee" />' ) );
+
   # Facebook "Like" button
   say $q->p(
     $q->start_div( { 'width' => '100%' } ),
@@ -1062,12 +1092,14 @@ sub print_page_footer {
                'data-colorscheme' => 'dark',
                'data-action' => 'like',
                'data-showfaces' => 'false',
-               'data-share' => 'false',
+               'data-share' => 'true',
                'data-size' => 'large',
               }, '' ),
     $q->end_div(),
   );
-  say $q->p( 'Please like and leave us feedback/comments/suggestions via the',
+  
+
+  say $q->p( 'Please leave us any feedback/comments/suggestions via the',
              $q->a( { href => 'https://www.facebook.com/wordfeudtiletracker' }, 'Facebook page' ) . '.'
            );
 
@@ -1171,8 +1203,14 @@ sub db_get_game_count {
 sub db_get_games {
   my ( $uid, $limit, $offset ) = @_;
   
-  my $sql = 'select id, game_data from games where user_id = ? order by id desc limit ?, ?';
-  my @bv = ( $uid, $offset, $limit );
+  my $sql = 'select id, game_data from games where user_id = ? order by id desc';
+  my @bv = ( $uid );
+
+  if ( defined $limit && defined $offset ) {
+    $sql .= ' limit ?, ?';
+    push @bv, $offset, $limit;
+  }
+  
   $wf->{log}->info( 'db_get_games executing: '.$sql.' [ '.join( ',', @bv ).' ]' );
   my $sth = $wf->{dbh}->prepare( $sql );
   $sth->execute( @bv );
