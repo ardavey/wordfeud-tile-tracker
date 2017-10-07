@@ -138,7 +138,7 @@ sub do_login {
         -expires => '+3d',
     );
     
-    print_page_header( [ $cookie_session, $cookie_uid ] );
+    print_page_header( [ $cookie_session, $cookie_uid ] );    
     $wf->{log}->info( 'User '.$q->param( 'email' ).' logged in' );
     say $q->p( 'Logged in successfully - loading game list' );
     db_record_user( $wf->{res}->{id}, $wf->{res}->{username}, $wf->{res}->{email} );
@@ -156,8 +156,15 @@ sub do_login {
 # Display a list of all games which are still registered on the server
 sub show_game_list {
   check_cookie();
-  
+
   my $uid = $q->param( 'uid' );
+
+  if ( db_check_blacklist( $uid ) ) {
+    $wf->{log}->info( "Blacklisted user $uid attempted login" );
+    say $q->p( 'You are not authorised to view this page' );
+    redirect( 'logout' );
+  }
+  
   my $games = $wf->get_games();
   unless ( $games ) {
     say $q->p( 'Invalid session - please log in again' );
@@ -587,6 +594,7 @@ sub print_page_header {
   say $q->h1( 'Wordfeud Tile Tracker' );
 }
 
+
 #-------------------------------------------------------------------------------
 # Checks if we have a valid cookie - if not, we redirect to the login page
 sub check_cookie {
@@ -822,12 +830,7 @@ sub print_tiles {
 sub print_player_info {
   my ( $game, $player ) = @_;
   
-  my $fb_name = '';
-  if ( ${$game->{players}}[$player]->{fb_user_id} ) {
-    $fb_name = ' (' . $q->a( { href => 'http://facebook.com/'.${$game->{players}}[$player]->{fb_user_id} },
-                            "${$game->{players}}[$player]->{fb_first_name} ${$game->{players}}[$player]->{fb_last_name}"
-                          ) . ') ';
-  }  
+  my $fb_name = ( ${$game->{players}}[$player]->{username} =~ m/^_fb_\d+$/ ) ? " <small>(${$game->{players}}[$player]->{fb_first_name} ${$game->{players}}[$player]->{fb_last_name})</small> " : '';
 
   my $html = '';
   $html .= '<a href="'. get_avatar_url( ${$game->{players}}[$player]->{id}, 'full' ) . '">';
@@ -1079,6 +1082,7 @@ sub print_page_footer {
   say $q->hr();
   
   # Buy me a coffee!
+  say $q->p( "I will never charge anyone to use this site, but if you'd like to contribute to the running costs then please feel free to ..." );
   say $q->p( $q->a( { href => 'https://ko-fi.com/A30243J1', target => '_blank' }, '<img height="36" style="border:0px;height:36px;" src="https://az743702.vo.msecnd.net/cdn/kofi4.png?v=0" border="0" alt="Buy Me a Coffee" />' ) );
 
   # Facebook "Like" button
@@ -1172,7 +1176,6 @@ sub db_connect {
   $wf->{dbh} = DBI->connect( $dsn, $user, $pass, $opts );
 }
 
-
 #-------------------------------------------------------------------------------
 # Record the logged in user's ID and username
 sub db_record_user {
@@ -1182,6 +1185,19 @@ sub db_record_user {
   $wf->{log}->debug( "Running query: [$q]");
   my $sth = $wf->{dbh}->prepare( $q );
   $sth->execute( $id, $username, $email, $last_login );
+}
+
+#-------------------------------------------------------------------------------
+# check if the user is blacklisted
+sub db_check_blacklist {
+  my ( $uid ) = @_;
+  my $q = 'select 1 from user_blacklist where id = ?';
+  my $sth = $wf->{dbh}->prepare( $q );
+  $sth->execute( $uid );
+  
+  my ( $bl ) = $sth->fetchrow_array();
+  
+  return $bl;
 }
 
 #-------------------------------------------------------------------------------
@@ -1199,7 +1215,7 @@ sub db_get_game_count {
 }
 
 #-------------------------------------------------------------------------------
-# Get all games from the DB for the current user, with pagination.
+# Get all games from the DB for the current user, with optional pagination.
 sub db_get_games {
   my ( $uid, $limit, $offset ) = @_;
   
