@@ -1110,7 +1110,7 @@ sub print_page_footer {
 
   hit_counter();
 
-  say $q->p( $q->small( 'Current time is ' . gmtime() . '.' );
+  say $q->p( $q->small( 'Current time is ' . gmtime() . '.' ) );
   say $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
   say $q->p( $q->small( 'Timestamps are all in GMT.<br/>The site is provided by ardavey free of charge with no guarantees of making you a better player.' ) );
 
