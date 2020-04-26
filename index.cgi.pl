@@ -21,6 +21,7 @@ use CGI qw( -nosticky );
 use CGI::Cookie;
 use DateTime qw( from_epoch );
 use Time::HiRes qw( gettimeofday tv_interval );
+use POSIX qw( strftime );
 use DBI;
 use JSON qw( encode_json decode_json );
 use Compress::Zlib;
@@ -594,9 +595,9 @@ sub print_page_header {
   say $q->h1( 'Wordfeud Tile Tracker' );
   
   # Buy me a coffee!
-  say $q->p( "I will never charge anyone to use this site, but if you're a fan and would like to contribute to the running costs then please feel free to:" );
+  say $q->p( 'This site will always be free but if you are a fan and would like to contribute to the running costs then please feel free to:' );
   say $q->p( $q->a( { href => 'https://ko-fi.com/A30243J1', target => '_blank' }, '<img height="36" style="border:0px;height:36px;" src="https://az743702.vo.msecnd.net/cdn/kofi4.png?v=0" border="0" alt="Buy Me a Coffee" />' ) );
-  
+  say $q->p( 'All donations are very gratefully received.' );
 }
 
 
@@ -764,7 +765,8 @@ sub print_game_link {
   $game_link .= $q->small(
                           $print_lang,
                           ( $game->{board} == 0 ) ? ' &mdash; Standard board' : ' &mdash; Random board',
-                          "<br/>Started: $started &mdash; Last Move: $updated"
+                          "<br/>Started: $started",
+                          "<br/>Last Move: $updated",
                           );
   $game_link .= '</span>';
 
@@ -1110,7 +1112,7 @@ sub print_page_footer {
 
   hit_counter();
 
-  say $q->p( $q->small( 'Current time is ' . gmtime() . '.' ) );
+  say $q->p( $q->small( 'Current time is ' . strftime( "%F %T", gmtime() ) . '.' ) );
   say $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
   say $q->p( $q->small( 'Timestamps are all in GMT.<br/>The site is provided by ardavey free of charge with no guarantees of making you a better player.' ) );
 
