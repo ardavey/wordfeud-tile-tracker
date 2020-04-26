@@ -277,10 +277,10 @@ sub show_game_list {
   
   say $q->start_div( { id => 'archivesection', class => 'togglable' } );
   
-  say $q->p( 'This section will show you all old games which have at some time been seen',
+  say $q->p( 'This section will show you all old games which have at some time been listed',
              'in the "Completed Games" section above.' );
   
-  say $q->p( 'This means that all you need to do to archive your games is log into',
+  say $q->p( 'All you need to do to archive your games is log into',
              'the website at least once between completing the game and that game being deleted',
              'inside the Wordfeud app itself - if you are a regular user then this will',
              'be no extra effort!' );
@@ -587,11 +587,16 @@ sub print_page_header {
     -title => 'Wordfeud Tile Tracker',
     -style => { -src => "style.css?v=$$" },
     -head => [ $q->Link( { -rel => 'shortcut icon', -href => 'favicon.png' } ), ],
-    -script => [ { -type => 'javascript', -src => 'http://code.jquery.com/jquery-1.11.0.min.js' },
+    -script => [ { -type => 'javascript', -src => 'https://code.jquery.com/jquery-1.11.0.min.js' },
                  { -type => 'javascript', -src => "wordfeudtiletracker.js?p=$$" }, ]
   );
   
   say $q->h1( 'Wordfeud Tile Tracker' );
+  
+  # Buy me a coffee!
+  say $q->p( "I will never charge anyone to use this site, but if you're a fan and would like to contribute to the running costs then please feel free to:" );
+  say $q->p( $q->a( { href => 'https://ko-fi.com/A30243J1', target => '_blank' }, '<img height="36" style="border:0px;height:36px;" src="https://az743702.vo.msecnd.net/cdn/kofi4.png?v=0" border="0" alt="Buy Me a Coffee" />' ) );
+  
 }
 
 
@@ -749,9 +754,9 @@ sub print_game_link {
   $game_link .= '<br />';
   
   my $started = DateTime->from_epoch( epoch => $game->{created}, time_zone => "UTC" );
-  #my $updated = DateTime->from_epoch( epoch => $game->{updated}, time_zone => "UTC" );
+  my $updated = DateTime->from_epoch( epoch => $game->{updated}, time_zone => "UTC" );
   $started =~ s/(\d)T(\d)/$1 $2/;
-  #$updated =~ s/(\d)T(\d)/$1 $2/;
+  $updated =~ s/(\d)T(\d)/$1 $2/;
   
   my $print_lang = $wf->{dist}->{name};
   utf8::encode( $print_lang );
@@ -759,7 +764,7 @@ sub print_game_link {
   $game_link .= $q->small(
                           $print_lang,
                           ( $game->{board} == 0 ) ? ' &mdash; Standard board' : ' &mdash; Random board',
-                          "<br/>Started: $started" # &mdash; Last Move: $updated"
+                          "<br/>Started: $started &mdash; Last Move: $updated"
                           );
   $game_link .= '</span>';
 
@@ -826,7 +831,7 @@ sub print_tiles {
 }
 
 #-------------------------------------------------------------------------------
-# Say the player avatar, name and score for the top of the show_game_details page
+# Format the player avatar, name and score for the top of the show_game_details page
 sub print_player_info {
   my ( $game, $player ) = @_;
   
@@ -844,7 +849,7 @@ sub print_player_info {
 }
 
 #-------------------------------------------------------------------------------
-# Hacky generation of HTML to show the pretty coloured board, and played tiles
+# Hacky generation of HTML to show the pretty coloured board and played tiles
 sub print_board_and_last_move {
   my ( $board, $game ) = @_;
 
@@ -942,7 +947,7 @@ sub print_scores {
 }
 
 #-------------------------------------------------------------------------------
-# Say details of the last move played
+# Print details of the last move played
 sub print_last_move {
   my ( $game ) = @_;
   
@@ -978,7 +983,7 @@ sub print_last_move {
 }
 
 #-------------------------------------------------------------------------------
-# Say out any chat messages exchanged in the current game
+# Print out any chat messages exchanged in the current game
 sub print_chat {
   my ( $game ) = @_;
   
@@ -1081,10 +1086,6 @@ sub get_avatar_url {
 sub print_page_footer {
   say $q->hr();
   
-  # Buy me a coffee!
-  say $q->p( "I will never charge anyone to use this site, but if you'd like to contribute to the running costs then please feel free to ..." );
-  say $q->p( $q->a( { href => 'https://ko-fi.com/A30243J1', target => '_blank' }, '<img height="36" style="border:0px;height:36px;" src="https://az743702.vo.msecnd.net/cdn/kofi4.png?v=0" border="0" alt="Buy Me a Coffee" />' ) );
-
   # Facebook "Like" button
   say $q->p(
     $q->start_div( { 'width' => '100%' } ),
@@ -1109,8 +1110,9 @@ sub print_page_footer {
 
   hit_counter();
 
+  say $q->p( $q->small( 'Current time is ' . gmtime() . '.' );
   say $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
-  say $q->p( $q->small( 'Timestamps are all in GMT.<br/>The site is provided free of charge with no guarantees of making you a better player.' ) );
+  say $q->p( $q->small( 'Timestamps are all in GMT.<br/>The site is provided by ardavey free of charge with no guarantees of making you a better player.' ) );
 
   if ( $action ne 'login_form' ) {
     print_navigate_button( 'logout', 'Log out' );
