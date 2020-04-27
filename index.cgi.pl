@@ -21,7 +21,7 @@ use CGI qw( -nosticky );
 use CGI::Cookie;
 use DateTime qw( from_epoch );
 use Time::HiRes qw( gettimeofday tv_interval );
-use POSIX qw( strftime );
+use Time::Piece;
 use DBI;
 use JSON qw( encode_json decode_json );
 use Compress::Zlib;
@@ -42,6 +42,7 @@ my $q = new CGI;
 my $wf = new Wordfeud;
 
 $wf->{log} = get_logger();
+$wf->{now} = Time::Piece->new();
 
 my $action = $q->param( "action" ) || 'login_form';
 
@@ -1112,7 +1113,7 @@ sub print_page_footer {
 
   hit_counter();
 
-  say $q->p( $q->small( 'Current time is ' . strftime( "%F %T", gmtime() ) . '.' ) );
+  say $q->p( $q->small( 'Current time is ' . gmtime->strftime( "%F %T" ) . '.' ) );
   say $q->p( $q->small( 'Page generated in ' . tv_interval( $wf->{t0} ) . ' seconds.' ) );
   say $q->p( $q->small( 'Timestamps are all in GMT.<br/>The site is provided by ardavey free of charge with no guarantees of making you a better player.' ) );
 
